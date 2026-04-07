@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>档案智能开放审核平台</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 编译 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Lucide 图标库 (使用 SVG 避免 Emoji，符合 UI 规范) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 ECharts 用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        /**
+         * Navbar 导航栏组件
+         * 负责渲染顶部系统 Logo、主导航菜单及右侧工具图标
+         */
+        const Navbar = () => {
+            // 定义菜单项常量，使用 UPPER_SNAKE_CASE 规范
+            const MENU_ITEMS = ['工作台', '数据管理', '数据获取', '鉴定模型', '开放审核', '系统管理'];
+            
+            return (
+                <nav className="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+                    <div className="flex items-center space-x-8">
+                        {/* 渲染 Logo 和系统名称区域 */}
+                        <div className="flex items-center space-x-2 cursor-pointer">
+                            <div className="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
+                            <span className="text-xl font-bold text-slate-800 tracking-wide">档案智能开放审核平台</span>
+                        </div>
+                        {/* 渲染主导航菜单 */}
+                        <div className="hidden md:flex space-x-1">
+                            {MENU_ITEMS.map((item, index) => (
+                                <div key={index} className={`px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1
+                                    ${index === 0 ? 'text-primary bg-sky-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                    <span>{item}</span>
+                                    {/* 仅非首项菜单展示下拉箭头 */}
+                                    {index !== 0 && <i data-lucide="chevron-down" className="w-4 h-4 opacity-50"></i>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    {/* 渲染右侧系统工具栏 */}
+                    <div className="flex items-center space-x-5 text-slate-500">
+                        <i data-lucide="search" className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="lock" className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="sun" className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        {/* 用户头像占位 */}
+                        <div className="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        <i data-lucide="settings" className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                    </div>
+                </nav>
+            );
+        };
+
+        /**
+         * Breadcrumb 面包屑导航组件
+         * 用于展示当前页面所在层级位置
+         */
+        const Breadcrumb = () => (
+            <div className="bg-white px-4 md:px-8 py-2 border-b border-slate-200 flex items-center text-sm text-primary font-medium">
+                <div className="flex items-center bg-blue-50 px-3 py-1 rounded cursor-pointer">
+                    <i data-lucide="layout-grid" className="w-4 h-4 mr-2"></i>
+                    工作台
+                    <i data-lucide="x" className="w-3 h-3 ml-2 hover:text-blue-700"></i>
+                </div>
+            </div>
+        );
+
+        /**
+         * StatCard 统计数据卡片组件
+         * 渲染核心统计指标及趋势
+         * @param {Object} props 组件属性
+         */
+        const StatCard = ({ title, value, unit, trend, icon, colorClass, children }) => (
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col justify-between h-full">
+                {/* 标题与图标 */}
+                <div className="flex justify-between items-start mb-2">
+                    <span className="text-slate-500 text-sm">{title}</span>
+                    <i data-lucide={icon} className={`w-4 h-4 ${colorClass}`}></i>
+                </div>
+                {/* 核心数值 */}
+                <div className="flex items-end space-x-2">
+                    <span className="text-2xl font-bold text-slate-800">{value}</span>
+                    <span className="text-slate-300 text-xs mb-1">{unit}</span>
+                </div>
+                {/* 底部趋势说明或自定义子元素（如微型图表） */}
+                <div className="text-xs text-slate-500 mt-2 flex items-center justify-between">
+                    <span>较昨日 <span className="text-emerald-500 font-semibold ml-1">{trend}</span></span>
+                    {children}
+                </div>
+            </div>
+        );
+
+        /**
+         * TaskCard 鉴定任务卡片组件
+         * 渲染单个任务的详情信息和进度条
+         * @param {Object} props 任务详情属性
+         */
+        const TaskCard = ({ title, creator, time, total, checked, opened, progress }) => {
+            // 根据进度决定状态颜色和文本
+            const isCompleted = progress === 100;
+            const isStarted = progress > 0;
+            
+            const statusColor = isCompleted ? 'bg-emerald-500' : (isStarted ? 'bg-blue-500' : 'bg-slate-300');
+            const statusBg = isCompleted ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : (isStarted ? 'bg-blue-50 text-blue-700 ring-blue-600/20' : 'bg-slate-50 text-slate-700 ring-slate-600/20');
+            const statusText = isCompleted ? '已完成' : (isStarted ? '进行中' : '未开始');
+
+            return (
+                <div className="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4 mt-1">
+                        <h3 className="text-base font-bold text-slate-800 group-hover:text-primary transition-colors">{title}</h3>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ring-1 ring-inset ${statusBg}`}>
+                            {statusText}
+                        </span>
+                    </div>
+                    
+                    {/* 任务基本信息 */}
+                    <div className="flex flex-col gap-2 text-sm text-slate-500 leading-relaxed mb-6 flex-1">
+                        <div className="flex items-center">
+                            <i data-lucide="user" className="w-4 h-4 mr-2 text-slate-400"></i>
+                            <span>创建人: <span className="text-slate-600">{creator}</span></span>
+                        </div>
+                        <div className="flex items-center">
+                            <i data-lucide="clock" className="w-4 h-4 mr-2 text-slate-400"></i>
+                            <span>时间: <span className="text-slate-600">{time}</span></span>
+                        </div>
+                    </div>
+
+                    {/* 任务档案数据统计网格 */}
+                    <div className="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mb-4 bg-slate-50/50 rounded-lg">
+                        <div className="flex flex-col items-center justify-center">
+                            <span className="text-slate-400 text-xs mb-1">档案总量</span>
+                            <span className="font-semibold text-slate-700">{total}</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center border-l border-slate-200/60">
+                            <span className="text-slate-400 text-xs mb-1">控制量</span>
+                            <span className="font-semibold text-slate-700">{checked}</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center border-l border-slate-200/60">
+                            <span className="text-slate-400 text-xs mb-1">开放量</span>
+                            <span className="font-semibold text-slate-700">{opened}</span>
+                        </div>
+                    </div>
+
+                    {/* 进度条展示 */}
+                    <div className="mt-auto">
+                        <div className="flex justify-between text-xs text-slate-600 mb-2">
+                            <span className="font-medium flex items-center"><i data-lucide="activity" className="w-3.5 h-3.5 mr-1 text-slate-400"></i>当前进度</span>
+                            <span className="font-bold">{progress}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${statusColor}`} style={{ width: `${progress}%` }}></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * FondsChart 全宗数据统计柱状图组件
+         * 渲染可横向滚动的柱状图，展示各全宗开放与受控数量
+         */
+        const FondsChart = () => {
+            const chartRef = React.useRef(null);
+            // 图表实例引用，用于在组件外调用 ECharts 方法
+            const chartInstance = React.useRef(null);
+            
+            // 数据总量
+            const totalItems = 30;
+            const itemsPerPage = 10;
+            // 当前页码状态
+            const [currentPage, setCurrentPage] = useState(0);
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+            useEffect(() => {
+                if (!chartRef.current) return;
+                
+                // 初始化并保存图表实例
+                const myChart = echarts.init(chartRef.current);
+                chartInstance.current = myChart;
+                
+                // 模拟 30 个全宗的数据
+                const categories = Array.from({length: totalItems}, (_, i) => `全宗${i + 1}`);
+                const openedData = Array.from({length: totalItems}, () => Math.floor(Math.random() * 500) + 50);
+                const controlledData = Array.from({length: totalItems}, () => Math.floor(Math.random() * 200) + 10);
+
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' },
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        borderColor: '#e2e8f0',
+                        textStyle: { color: '#334155' },
+                        confine: true,
+                        appendToBody: true
+                    },
+                    legend: {
+                        data: ['开放数量', '受控数量'],
+                        right: '10%', // 与 grid.right 保持一致
+                        top: 0,
+                        icon: 'circle',
+                        textStyle: { color: '#64748b' }
+                    },
+                    grid: {
+                        left: '4%',
+                        right: '10%',
+                        bottom: '5%', // 去掉底部滚动条后，底部边距可以变小
+                        top: '15%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: categories,
+                        axisLine: { lineStyle: { color: '#cbd5e1' } },
+                        axisTick: { alignWithLabel: true, lineStyle: { color: '#cbd5e1' } },
+                        axisLabel: { color: '#64748b', interval: 0, margin: 10 }, 
+                        boundaryGap: true 
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '单位：卷/件',
+                        nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, -20] },
+                        axisLabel: { color: '#64748b' },
+                        splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } }
+                    },
+                    // 完全移除 dataZoom 滚动条，改用代码控制视图
+                    dataZoom: [
+                        {
+                            type: 'inside', // 仅保留内置控制
+                            xAxisIndex: [0],
+                            startValue: 0,
+                            endValue: itemsPerPage - 1, // 初始显示 10 个
+                            zoomLock: true, // 禁止缩放
+                            moveOnMouseMove: false, // 禁止鼠标拖动
+                            moveOnMouseWheel: false // 禁止滚轮拖动
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '开放数量',
+                            type: 'bar',
+                            barWidth: '34%',
+                            barMaxWidth: 28,
+                            barGap: '15%',
+                            itemStyle: { color: '#0284c7', borderRadius: [4, 4, 0, 0] }, 
+                            data: openedData
+                        },
+                        {
+                            name: '受控数量',
+                            type: 'bar',
+                            barWidth: '34%',
+                            barMaxWidth: 28,
+                            itemStyle: { color: '#475569', borderRadius: [4, 4, 0, 0] }, 
+                            data: controlledData
+                        }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                const handleResize = () => myChart.resize();
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    myChart.dispose();
+                    chartInstance.current = null;
+                };
+            }, []);
+
+            // 监听页码变化，更新 ECharts 视图范围
+            useEffect(() => {
+                if (chartInstance.current) {
+                    const startValue = currentPage * itemsPerPage;
+                    const endValue = startValue + itemsPerPage - 1;
+                    
+                    chartInstance.current.dispatchAction({
+                        type: 'dataZoom',
+                        startValue: startValue,
+                        endValue: endValue
+                    });
+                }
+            }, [currentPage]);
+
+            // 翻页处理函数
+            const handlePrevPage = () => {
+                setCurrentPage(prev => Math.max(0, prev - 1));
+            };
+
+            const handleNextPage = () => {
+                setCurrentPage(prev => Math.min(totalPages - 1, prev + 1));
+            };
+
+            return (
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-slate-100 flex-1 flex flex-col">
+                    <div className="flex items-center justify-between mb-2 border-b border-slate-100 pb-4">
+                        <h2 className="text-lg font-bold text-slate-800 flex items-center">
+                            <i data-lucide="bar-chart-2" className="w-5 h-5 mr-2 text-blue-500"></i>
+                            全宗数据统计
+                        </h2>
+                        
+                        {/* 自定义翻页控件 */}
+                        <div className="flex items-center space-x-3">
+                            <span className="text-xs text-slate-400">
+                                {currentPage + 1} / {totalPages} 页
+                            </span>
+                            <div className="flex space-x-1">
+                                <button 
+                                    onClick={handlePrevPage}
+                                    disabled={currentPage === 0}
+                                    className={`w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                        currentPage === 0 
+                                        ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
+                                        : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'
+                                    }`}
+                                >
+                                    <i data-lucide="chevron-left" className="w-4 h-4"></i>
+                                </button>
+                                <button 
+                                    onClick={handleNextPage}
+                                    disabled={currentPage === totalPages - 1}
+                                    className={`w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                        currentPage === totalPages - 1 
+                                        ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' 
+                                        : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'
+                                    }`}
+                                >
+                                    <i data-lucide="chevron-right" className="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="w-full relative px-2">
+                        <div ref={chartRef} style={{ width: '100%', height: '300px' }}></div>
+                    </div>
+                </div>
+            );
+        };
+
+        /**
+         * App 根组件
+         * 组合拼装页面的各个模块组件
+         */
+        const App = () => {
+            // 在组件挂载后初始化 Lucide 图标
+            useEffect(() => {
+                lucide.createIcons();
+            });
+
+            // 任务列表模拟数据 (仅用于前端UI展示占位)
+            const MOCK_TASKS = [
+                { title: '鉴定任务', creator: '超级管理员', time: '2023-09-05 14:14', total: 15, checked: 12, opened: 2, progress: 60 },
+                { title: 'A全宗标注任务', creator: '超级管理员', time: '2023-09-06 14:14', total: 10, checked: 1, opened: 0, progress: 100 },
+                { title: 'A全宗任务', creator: '超级管理员', time: '2023-09-07 10:42', total: 6, checked: 5, opened: 0, progress: 40 },
+                { title: 'B全宗任务', creator: '超级管理员', time: '2023-09-18 11:25', total: 3, checked: 2, opened: 1, progress: 100 },
+                { title: 'C全宗任务', creator: '超级管理员', time: '2023-09-18 11:30', total: 6, checked: 6, opened: 0, progress: 60 },
+                { title: 'D全宗任务', creator: '超级管理员', time: '2023-09-25 11:51', total: 10, checked: 0, opened: 0, progress: 60 },
+                { title: 'E全宗鉴定任务', creator: '超级管理员', time: '2023-10-19 13:40', total: 10, checked: 0, opened: 0, progress: 60 },
+                { title: 'P全宗鉴定任务', creator: '超级管理员', time: '2023-10-29 23:47', total: 13, checked: 1, opened: 0, progress: 60 },
+            ];
+
+            // 任务状态过滤标签常量
+            const TASK_STATUS_TABS = ['全部', '鉴定中', '审核中', '审批中', '已完成'];
+            
+            // 定义当前激活的任务标签状态变量
+            const [activeTab, setActiveTab] = useState('全部');
+
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-50">
+                    <Navbar />
+                    <Breadcrumb />
+                    
+                    {/* 主体内容区域 */}
+                    <main className="flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border">
+                        
+                        {/* 左侧主要区域 */}
+                        <div className="flex-1 flex flex-col gap-5 min-w-0">
+                            
+                            {/* 顶部：统计卡片平铺 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                                <StatCard title="鉴定开放数量" value="3,240" unit="卷/件" trend="+12" icon="unlock" colorClass="text-sky-600" />
+                                <StatCard title="鉴定受控数量" value="856" unit="卷/件" trend="+3" icon="lock" colorClass="text-slate-600" />
+                                <StatCard title="馆藏档案开放率" value="78.5" unit="%" trend="+0.5%" icon="pie-chart" colorClass="text-blue-700" />
+                                <StatCard title="模型token消耗量" value="1.2M" unit="tokens" trend="+5K" icon="cpu" colorClass="text-indigo-700" />
+                            </div>
+
+                            {/* 全宗数据统计柱状图 */}
+                            <FondsChart />
+
+                            {/* 任务列表区域 */}
+                            <div className="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5">
+                                <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                                    <h2 className="text-lg font-bold text-slate-800">开放鉴定任务</h2>
+                                </div>
+                                
+                                {/* 过滤和搜索栏 */}
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex space-x-3">
+                                        {TASK_STATUS_TABS.map(tab => (
+                                            <div 
+                                                key={tab} 
+                                                onClick={() => setActiveTab(tab)}
+                                                className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-md transition-colors relative ${
+                                                    activeTab === tab ? 'text-primary bg-sky-50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {tab}
+                                                {activeTab === tab && (
+                                                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex w-64">
+                                        <input 
+                                            type="text" 
+                                            placeholder="请输入任务名" 
+                                            className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-l-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-sky-100 transition-all"
+                                        />
+                                        <button className="bg-primary hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200 text-white px-4 py-1.5 rounded-r-md text-sm transition-colors flex items-center whitespace-nowrap shrink-0">
+                                            <i data-lucide="search" className="w-4 h-4 mr-1"></i>
+                                            查询
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 任务卡片网格 */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {MOCK_TASKS.map((task, idx) => (
+                                        <TaskCard key={idx} {...task} />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                    </main>
+                </div>
+            );
+        };
+
+        // 渲染 React 应用到 DOM
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
