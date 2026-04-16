@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN" ng-app="appraisalApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-OAAS档案开放鉴定系统 - 错检漏检库</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 AngularJS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<body ng-controller="MainController as ctrl" class="min-h-screen flex flex-col bg-slate-50">
+    
+    <navbar></navbar>
+    <breadcrumb></breadcrumb>
+    
+    <!-- 主体内容区域 -->
+    <main class="flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
+        <!-- 错检漏检库管理视图 -->
+        <error-omission-manage class="flex-1 flex flex-col min-w-0 w-full"></error-omission-manage>
+    </main>
+
+    <script>
+        var app = angular.module('appraisalApp', []);
+
+        // 重新渲染图标的服务
+        app.service('IconService', function($timeout) {
+            this.refresh = function() {
+                $timeout(function() {
+                    lucide.createIcons();
+                }, 0);
+            };
+        });
+
+        // 模拟全局状态服务
+        app.factory('ConfigService', function() {
+            return {
+                sensitiveTypes: [
+                    { id: 1, name: '个人隐私', controlFlag: '受控' },
+                    { id: 2, name: '国家秘密', controlFlag: '受控' },
+                    { id: 3, name: '商业秘密', controlFlag: '受控' },
+                    { id: 4, name: '普通公开', controlFlag: '开放' }
+                ]
+            };
+        });
+
+        app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
+            var ctrl = this;
+            
+            // 初始化导航状态
+            $timeout(function() {
+                $rootScope.$broadcast('NAVIGATE', '错检漏检库', '鉴定规则配置');
+            });
+        }]);
+
+        app.component('navbar', {
+            template: `
+                <nav class="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+                    <!-- 左侧 Logo -->
+                    <div class="flex items-center space-x-2 cursor-pointer flex-1 justify-start">
+                        <div class="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
+                        <span class="text-xl font-bold text-slate-800 tracking-wide whitespace-nowrap">MS-OAAS档案开放鉴定系统</span>
+                    </div>
+                    
+                    <!-- 中间功能菜单 -->
+                    <div class="hidden md:flex space-x-1 flex-none justify-center">
+                        <div ng-repeat="item in $ctrl.menuItems" 
+                             ng-click="!item.children && $ctrl.navigate(item.name)"
+                             ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
+                             class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <span>{{item.name}}</span>
+                            <i ng-if="item.children" data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            
+                            <!-- 二级菜单下拉框 -->
+                            <div ng-if="item.children" class="absolute top-full left-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1">
+                                    <div ng-repeat="child in item.children" 
+                                         ng-click="$ctrl.navigate(child, item.name); $event.stopPropagation();"
+                                         ng-class="{ 'text-primary bg-sky-50': $ctrl.currentSubMenu === child, 'text-slate-600 hover:bg-sky-50 hover:text-primary': $ctrl.currentSubMenu !== child }"
+                                         class="px-4 py-2 transition-colors cursor-pointer block">
+                                        {{child}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧系统栏 -->
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                        <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                    </div>
+                </nav>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentMenu = '鉴定规则配置';
+                ctrl.currentSubMenu = '错检漏检库';
+
+                ctrl.menuItems = [
+                    { name: '工作台' },
+                    { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
+                    { name: '鉴定任务管理' },
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                ];
+                
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentSubMenu = parentName ? name : '';
+                    ctrl.currentMenu = parentName || name;
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('breadcrumb', {
+            template: `
+                <div class="bg-white px-4 md:px-8 py-2 border-b border-slate-200 flex items-center text-sm text-primary font-medium">
+                    <div class="flex items-center bg-blue-50 px-3 py-1 rounded cursor-pointer transition-colors hover:bg-blue-100" ng-click="$ctrl.navigate('工作台')">
+                        <i data-lucide="layout-grid" class="w-4 h-4 mr-2"></i>
+                        工作台
+                    </div>
+                    <div class="flex items-center ml-2 text-slate-500">
+                        <i data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span ng-if="$ctrl.parentPath" class="mr-2">{{$ctrl.parentPath}}</span>
+                        <i ng-if="$ctrl.parentPath" data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span class="text-slate-700">{{$ctrl.currentPath}}</span>
+                        <i data-lucide="x" class="w-3 h-3 ml-2 cursor-pointer hover:text-blue-700" ng-click="$ctrl.navigate('工作台')"></i>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentPath = '错检漏检库';
+                ctrl.parentPath = '鉴定规则配置';
+
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentPath = name;
+                    ctrl.parentPath = parentName || '';
+                    IconService.refresh();
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('errorOmissionManage', {
+            template: `
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full">
+                    
+                    <!-- 顶部 Tabs 和 操作按钮 -->
+                    <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-0">
+                        <div class="flex space-x-6">
+                            <button ng-click="$ctrl.switchTab('error')" 
+                                    ng-class="{ 'text-primary border-b-2 border-primary pb-4 font-bold': $ctrl.activeTab === 'error', 'text-slate-500 pb-4 font-medium hover:text-slate-800 transition-colors': $ctrl.activeTab !== 'error' }">
+                                错检库
+                            </button>
+                            <button ng-click="$ctrl.switchTab('omission')" 
+                                    ng-class="{ 'text-primary border-b-2 border-primary pb-4 font-bold': $ctrl.activeTab === 'omission', 'text-slate-500 pb-4 font-medium hover:text-slate-800 transition-colors': $ctrl.activeTab !== 'omission' }">
+                                漏检库
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3 pb-3">
+                            <button ng-click="$ctrl.batchImport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="upload" class="w-4 h-4 mr-1"></i> 批量导入
+                            </button>
+                            <button ng-click="$ctrl.batchExport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="download" class="w-4 h-4 mr-1"></i> 批量导出
+                            </button>
+                            <button ng-click="$ctrl.openForm()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> {{ $ctrl.activeTab === 'error' ? '新增错检' : '新增漏检' }}
+                            </button>
+                            <button ng-click="$ctrl.batchDelete()" ng-disabled="!$ctrl.hasSelected()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 批量删除
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 错检库列表 -->
+                    <div class="overflow-x-auto" ng-show="$ctrl.activeTab === 'error'">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                                    <th class="px-4 py-3 font-medium w-12">
+                                        <input type="checkbox" ng-model="$ctrl.selectAllError" ng-change="$ctrl.toggleAll('error')" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </th>
+                                    <th class="px-4 py-3 font-medium w-16">序号</th>
+                                    <th class="px-4 py-3 font-medium w-48">错检类型</th>
+                                    <th class="px-4 py-3 font-medium">错检语块</th>
+                                    <th class="px-4 py-3 font-medium">错检明细</th>
+                                    <th class="px-4 py-3 font-medium text-right w-32">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in $ctrl.errorList" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll('error')" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
+                                    <td class="px-4 py-3 text-slate-800">
+                                        <span class="px-2 py-1 rounded text-xs bg-rose-50 text-rose-700 border border-rose-100">{{item.errorType}}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.chunk}}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{item.detail}}</td>
+                                    <td class="px-4 py-3 text-right space-x-3">
+                                        <button ng-click="$ctrl.editItem(item, 'error')" class="text-blue-600 hover:text-blue-800 font-medium">编辑</button>
+                                        <button ng-click="$ctrl.deleteItem(item, 'error')" class="text-red-600 hover:text-red-800 font-medium">删除</button>
+                                    </td>
+                                </tr>
+                                <tr ng-if="$ctrl.errorList.length === 0">
+                                    <td colspan="6" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 漏检库列表 -->
+                    <div class="overflow-x-auto" ng-show="$ctrl.activeTab === 'omission'">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                                    <th class="px-4 py-3 font-medium w-12">
+                                        <input type="checkbox" ng-model="$ctrl.selectAllOmission" ng-change="$ctrl.toggleAll('omission')" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </th>
+                                    <th class="px-4 py-3 font-medium w-16">序号</th>
+                                    <th class="px-4 py-3 font-medium w-48">漏检敏感类型</th>
+                                    <th class="px-4 py-3 font-medium">漏检语块</th>
+                                    <th class="px-4 py-3 font-medium">漏检明细</th>
+                                    <th class="px-4 py-3 font-medium text-right w-32">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in $ctrl.omissionList" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll('omission')" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
+                                    <td class="px-4 py-3 text-slate-800">
+                                        <span class="px-2 py-1 rounded text-xs bg-amber-50 text-amber-700 border border-amber-100">{{item.type.name}}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.chunk}}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{item.detail}}</td>
+                                    <td class="px-4 py-3 text-right space-x-3">
+                                        <button ng-click="$ctrl.editItem(item, 'omission')" class="text-blue-600 hover:text-blue-800 font-medium">编辑</button>
+                                        <button ng-click="$ctrl.deleteItem(item, 'omission')" class="text-red-600 hover:text-red-800 font-medium">删除</button>
+                                    </td>
+                                </tr>
+                                <tr ng-if="$ctrl.omissionList.length === 0">
+                                    <td colspan="6" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 错检弹窗表单 -->
+                    <div ng-if="$ctrl.showErrorForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '编辑' : '新增' }}错检</h3>
+                                <button ng-click="$ctrl.closeForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">错检类型 <span class="text-red-500">*</span></label>
+                                    <select ng-model="$ctrl.errorFormData.errorType" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                                        <option value="" disabled>请选择错检类型</option>
+                                        <option value="错检为受控">错检为受控</option>
+                                        <option value="错检为开放">错检为开放</option>
+                                        <option value="错检敏感类型">错检敏感类型</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">错检语块 <span class="text-red-500">*</span></label>
+                                    <input type="text" ng-model="$ctrl.errorFormData.chunk" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入错检语块">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">错检明细</label>
+                                    <textarea ng-model="$ctrl.errorFormData.detail" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="请输入错检明细说明"></textarea>
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                                <button ng-click="$ctrl.closeForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
+                                <button ng-click="$ctrl.saveErrorForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 漏检弹窗表单 -->
+                    <div ng-if="$ctrl.showOmissionForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '编辑' : '新增' }}漏检</h3>
+                                <button ng-click="$ctrl.closeForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">漏检敏感类型 <span class="text-red-500">*</span></label>
+                                    <select ng-options="type.name for type in $ctrl.sensitiveTypes track by type.id" ng-model="$ctrl.omissionFormData.type" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                                        <option value="" disabled>请选择敏感类型</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">漏检语块 <span class="text-red-500">*</span></label>
+                                    <input type="text" ng-model="$ctrl.omissionFormData.chunk" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入漏检语块">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">漏检明细</label>
+                                    <textarea ng-model="$ctrl.omissionFormData.detail" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="请输入漏检明细说明"></textarea>
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                                <button ng-click="$ctrl.closeForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
+                                <button ng-click="$ctrl.saveOmissionForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            `,
+            controller: ['IconService', 'ConfigService', '$timeout', function(IconService, ConfigService, $timeout) {
+                var ctrl = this;
+                
+                ctrl.activeTab = 'error'; // 'error' or 'omission'
+                ctrl.sensitiveTypes = ConfigService.sensitiveTypes;
+                
+                ctrl.errorList = [
+                    { id: 1, errorType: '错检为受控', chunk: '张三去北京出差', detail: '普通人名和地名组合，不涉及敏感内容，被错误识别为受控。', selected: false },
+                    { id: 2, errorType: '错检敏感类型', chunk: '13800138000', detail: '联系电话被错误归类为身份证号敏感类型。', selected: false }
+                ];
+
+                ctrl.omissionList = [
+                    { id: 1, type: ctrl.sensitiveTypes[0], chunk: '李四的家庭住址是朝阳区某某街道', detail: '包含明确的个人隐私住址信息，模型未检出。', selected: false },
+                    { id: 2, type: ctrl.sensitiveTypes[2], chunk: '2023年第四季度营收目标为5000万', detail: '涉及公司内部商业机密数据，模型漏检。', selected: false }
+                ];
+
+                ctrl.showErrorForm = false;
+                ctrl.showOmissionForm = false;
+                ctrl.isEdit = false;
+                ctrl.errorFormData = {};
+                ctrl.omissionFormData = {};
+                ctrl.selectAllError = false;
+                ctrl.selectAllOmission = false;
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+
+                ctrl.switchTab = function(tab) {
+                    ctrl.activeTab = tab;
+                    IconService.refresh();
+                };
+
+                ctrl.batchImport = function() {
+                    alert('请选择要导入的 ' + (ctrl.activeTab === 'error' ? '错检库' : '漏检库') + ' Excel/CSV 文件');
+                };
+
+                ctrl.batchExport = function() {
+                    var list = ctrl.activeTab === 'error' ? ctrl.errorList : ctrl.omissionList;
+                    var selectedCount = list.filter(function(item) { return item.selected; }).length;
+                    var typeName = ctrl.activeTab === 'error' ? '错检库' : '漏检库';
+                    
+                    if (selectedCount === 0) {
+                        alert('将导出所有 ' + typeName + ' 数据');
+                    } else {
+                        alert('将导出选中的 ' + selectedCount + ' 项 ' + typeName + ' 数据');
+                    }
+                };
+
+                ctrl.toggleAll = function(type) {
+                    if (type === 'error') {
+                        ctrl.errorList.forEach(function(item) { item.selected = ctrl.selectAllError; });
+                    } else {
+                        ctrl.omissionList.forEach(function(item) { item.selected = ctrl.selectAllOmission; });
+                    }
+                };
+
+                ctrl.updateSelectAll = function(type) {
+                    if (type === 'error') {
+                        if (ctrl.errorList.length === 0) { ctrl.selectAllError = false; return; }
+                        ctrl.selectAllError = ctrl.errorList.every(function(item) { return item.selected; });
+                    } else {
+                        if (ctrl.omissionList.length === 0) { ctrl.selectAllOmission = false; return; }
+                        ctrl.selectAllOmission = ctrl.omissionList.every(function(item) { return item.selected; });
+                    }
+                };
+
+                ctrl.hasSelected = function() {
+                    if (ctrl.activeTab === 'error') {
+                        return ctrl.errorList.some(function(item) { return item.selected; });
+                    } else {
+                        return ctrl.omissionList.some(function(item) { return item.selected; });
+                    }
+                };
+
+                ctrl.batchDelete = function() {
+                    if (ctrl.activeTab === 'error') {
+                        var selectedItems = ctrl.errorList.filter(function(item) { return item.selected; });
+                        if (selectedItems.length === 0) return;
+                        if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项错检记录吗？')) {
+                            ctrl.errorList = ctrl.errorList.filter(function(item) { return !item.selected; });
+                            ctrl.selectAllError = false;
+                        }
+                    } else {
+                        var selectedItems = ctrl.omissionList.filter(function(item) { return item.selected; });
+                        if (selectedItems.length === 0) return;
+                        if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项漏检记录吗？')) {
+                            ctrl.omissionList = ctrl.omissionList.filter(function(item) { return !item.selected; });
+                            ctrl.selectAllOmission = false;
+                        }
+                    }
+                    IconService.refresh();
+                };
+
+                ctrl.openForm = function() {
+                    ctrl.isEdit = false;
+                    if (ctrl.activeTab === 'error') {
+                        ctrl.errorFormData = {};
+                        ctrl.showErrorForm = true;
+                    } else {
+                        ctrl.omissionFormData = {};
+                        ctrl.showOmissionForm = true;
+                    }
+                    IconService.refresh();
+                };
+
+                ctrl.editItem = function(item, type) {
+                    ctrl.isEdit = true;
+                    if (type === 'error') {
+                        ctrl.errorFormData = angular.copy(item);
+                        ctrl.showErrorForm = true;
+                    } else {
+                        ctrl.omissionFormData = angular.copy(item);
+                        ctrl.omissionFormData.type = ctrl.sensitiveTypes.find(function(t) { return t.id === item.type.id; });
+                        ctrl.showOmissionForm = true;
+                    }
+                    IconService.refresh();
+                };
+
+                ctrl.deleteItem = function(item, type) {
+                    if (confirm('确定要删除该条记录吗？')) {
+                        if (type === 'error') {
+                            var index = ctrl.errorList.findIndex(function(i) { return i.id === item.id; });
+                            if (index > -1) {
+                                ctrl.errorList.splice(index, 1);
+                                ctrl.updateSelectAll('error');
+                            }
+                        } else {
+                            var index = ctrl.omissionList.findIndex(function(i) { return i.id === item.id; });
+                            if (index > -1) {
+                                ctrl.omissionList.splice(index, 1);
+                                ctrl.updateSelectAll('omission');
+                            }
+                        }
+                    }
+                };
+
+                ctrl.closeForm = function() {
+                    ctrl.showErrorForm = false;
+                    ctrl.showOmissionForm = false;
+                };
+
+                ctrl.saveErrorForm = function() {
+                    if (!ctrl.errorFormData.errorType) { alert('请选择错检类型'); return; }
+                    if (!ctrl.errorFormData.chunk) { alert('请输入错检语块'); return; }
+                    
+                    if (ctrl.isEdit) {
+                        var index = ctrl.errorList.findIndex(function(i) { return i.id === ctrl.errorFormData.id; });
+                        if (index > -1) {
+                            var updatedItem = angular.copy(ctrl.errorFormData);
+                            updatedItem.selected = ctrl.errorList[index].selected;
+                            ctrl.errorList[index] = updatedItem;
+                        }
+                    } else {
+                        ctrl.errorFormData.id = Date.now();
+                        ctrl.errorFormData.selected = false;
+                        ctrl.errorList.push(angular.copy(ctrl.errorFormData));
+                    }
+                    ctrl.closeForm();
+                    IconService.refresh();
+                };
+
+                ctrl.saveOmissionForm = function() {
+                    if (!ctrl.omissionFormData.type) { alert('请选择漏检敏感类型'); return; }
+                    if (!ctrl.omissionFormData.chunk) { alert('请输入漏检语块'); return; }
+                    
+                    if (ctrl.isEdit) {
+                        var index = ctrl.omissionList.findIndex(function(i) { return i.id === ctrl.omissionFormData.id; });
+                        if (index > -1) {
+                            var updatedItem = angular.copy(ctrl.omissionFormData);
+                            updatedItem.selected = ctrl.omissionList[index].selected;
+                            ctrl.omissionList[index] = updatedItem;
+                        }
+                    } else {
+                        ctrl.omissionFormData.id = Date.now();
+                        ctrl.omissionFormData.selected = false;
+                        ctrl.omissionList.push(angular.copy(ctrl.omissionFormData));
+                    }
+                    ctrl.closeForm();
+                    IconService.refresh();
+                };
+            }]
+        });
+    </script>
+</body>
+</html>

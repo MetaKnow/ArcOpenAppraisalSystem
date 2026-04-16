@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN" ng-app="appraisalApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-OAAS档案开放鉴定系统 - 通用敏感词库</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 AngularJS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<body ng-controller="MainController as ctrl" class="min-h-screen flex flex-col bg-slate-50">
+    
+    <navbar></navbar>
+    <breadcrumb></breadcrumb>
+    
+    <!-- 主体内容区域 -->
+    <main class="flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
+        <!-- 通用敏感词库管理视图 -->
+        <general-sensitive-word-manage class="flex-1 flex flex-col min-w-0 w-full"></general-sensitive-word-manage>
+    </main>
+
+    <script>
+        var app = angular.module('appraisalApp', []);
+
+        // 重新渲染图标的服务
+        app.service('IconService', function($timeout) {
+            this.refresh = function() {
+                $timeout(function() {
+                    lucide.createIcons();
+                }, 0);
+            };
+        });
+
+        // 模拟全局状态服务（用于跨页面传递敏感类型配置，实际应由后端接口提供）
+        app.factory('ConfigService', function() {
+            return {
+                sensitiveTypes: [
+                    { id: 1, name: '个人隐私', controlFlag: '受控' },
+                    { id: 2, name: '国家秘密', controlFlag: '受控' },
+                    { id: 3, name: '商业秘密', controlFlag: '受控' },
+                    { id: 4, name: '普通公开', controlFlag: '开放' }
+                ]
+            };
+        });
+
+        app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
+            var ctrl = this;
+            
+            // 初始化导航状态
+            $timeout(function() {
+                $rootScope.$broadcast('NAVIGATE', '通用敏感词库', '鉴定规则配置');
+            });
+        }]);
+
+        app.component('navbar', {
+            template: `
+                <nav class="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+                    <!-- 左侧 Logo -->
+                    <div class="flex items-center space-x-2 cursor-pointer flex-1 justify-start">
+                        <div class="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
+                        <span class="text-xl font-bold text-slate-800 tracking-wide whitespace-nowrap">MS-OAAS档案开放鉴定系统</span>
+                    </div>
+                    
+                    <!-- 中间功能菜单 -->
+                    <div class="hidden md:flex space-x-1 flex-none justify-center">
+                        <div ng-repeat="item in $ctrl.menuItems" 
+                             ng-click="!item.children && $ctrl.navigate(item.name)"
+                             ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
+                             class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <span>{{item.name}}</span>
+                            <i ng-if="item.children" data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            
+                            <!-- 二级菜单下拉框 -->
+                            <div ng-if="item.children" class="absolute top-full left-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1">
+                                    <div ng-repeat="child in item.children" 
+                                         ng-click="$ctrl.navigate(child, item.name); $event.stopPropagation();"
+                                         ng-class="{ 'text-primary bg-sky-50': $ctrl.currentSubMenu === child, 'text-slate-600 hover:bg-sky-50 hover:text-primary': $ctrl.currentSubMenu !== child }"
+                                         class="px-4 py-2 transition-colors cursor-pointer block">
+                                        {{child}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧系统栏 -->
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                        <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                    </div>
+                </nav>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentMenu = '鉴定规则配置';
+                ctrl.currentSubMenu = '通用敏感词库';
+
+                ctrl.menuItems = [
+                    { name: '工作台' },
+                    { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
+                    { name: '鉴定任务管理' },
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                ];
+                
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentSubMenu = parentName ? name : '';
+                    ctrl.currentMenu = parentName || name;
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('breadcrumb', {
+            template: `
+                <div class="bg-white px-4 md:px-8 py-2 border-b border-slate-200 flex items-center text-sm text-primary font-medium">
+                    <div class="flex items-center bg-blue-50 px-3 py-1 rounded cursor-pointer transition-colors hover:bg-blue-100" ng-click="$ctrl.navigate('工作台')">
+                        <i data-lucide="layout-grid" class="w-4 h-4 mr-2"></i>
+                        工作台
+                    </div>
+                    <div class="flex items-center ml-2 text-slate-500">
+                        <i data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span ng-if="$ctrl.parentPath" class="mr-2">{{$ctrl.parentPath}}</span>
+                        <i ng-if="$ctrl.parentPath" data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span class="text-slate-700">{{$ctrl.currentPath}}</span>
+                        <i data-lucide="x" class="w-3 h-3 ml-2 cursor-pointer hover:text-blue-700" ng-click="$ctrl.navigate('工作台')"></i>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentPath = '通用敏感词库';
+                ctrl.parentPath = '鉴定规则配置';
+
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentPath = name;
+                    ctrl.parentPath = parentName || '';
+                    IconService.refresh();
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('generalSensitiveWordManage', {
+            template: `
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-bold text-slate-800">通用敏感词库</h2>
+                        <div class="flex items-center space-x-3">
+                            <button ng-click="$ctrl.batchImport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="upload" class="w-4 h-4 mr-1"></i> 批量导入
+                            </button>
+                            <button ng-click="$ctrl.batchExport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="download" class="w-4 h-4 mr-1"></i> 批量导出
+                            </button>
+                            <button ng-click="$ctrl.openForm()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> 新增敏感词
+                            </button>
+                            <button ng-click="$ctrl.batchDelete()" ng-disabled="!$ctrl.hasSelected()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 批量删除
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                                    <th class="px-4 py-3 font-medium w-12">
+                                        <input type="checkbox" ng-model="$ctrl.selectAll" ng-change="$ctrl.toggleAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </th>
+                                    <th class="px-4 py-3 font-medium w-16">序号</th>
+                                    <th class="px-4 py-3 font-medium">敏感词</th>
+                                    <th class="px-4 py-3 font-medium">敏感类型</th>
+                                    <th class="px-4 py-3 font-medium">控制标识</th>
+                                    <th class="px-4 py-3 font-medium">创建时间</th>
+                                    <th class="px-4 py-3 font-medium">是否启用</th>
+                                    <th class="px-4 py-3 font-medium text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in $ctrl.list" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
+                                    <td class="px-4 py-3">
+                                        <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
+                                    <td class="px-4 py-3 text-slate-800 break-all max-w-xs">{{item.words}}</td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.type.name}}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 rounded text-xs" ng-class="item.type.controlFlag === '受控' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'">
+                                            {{item.type.controlFlag}}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-500">{{item.createdAt}}</td>
+                                    <td class="px-4 py-3">
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" ng-model="item.enabled" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                        </label>
+                                    </td>
+                                    <td class="px-4 py-3 text-right space-x-3">
+                                        <button ng-click="$ctrl.editItem(item)" class="text-blue-600 hover:text-blue-800 font-medium">编辑</button>
+                                        <button ng-click="$ctrl.deleteItem(item)" class="text-red-600 hover:text-red-800 font-medium">删除</button>
+                                    </td>
+                                </tr>
+                                <tr ng-if="$ctrl.list.length === 0">
+                                    <td colspan="8" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 弹窗表单 -->
+                    <div ng-if="$ctrl.showForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
+                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '编辑' : '新增' }}通用敏感词</h3>
+                                <button ng-click="$ctrl.closeForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感词 <span class="text-red-500">*</span></label>
+                                    <textarea ng-model="$ctrl.formData.words" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="多个敏感词用英文,隔开"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感类型 <span class="text-red-500">*</span></label>
+                                    <select ng-options="type.name for type in $ctrl.sensitiveTypes track by type.id" ng-model="$ctrl.formData.type" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                                        <option value="" disabled>请选择敏感类型</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">控制标识</label>
+                                    <input type="text" ng-value="$ctrl.formData.type.controlFlag || '自动获取'" disabled class="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-md cursor-not-allowed">
+                                    <p class="text-xs text-slate-400 mt-1">根据选择的敏感类型自动填充</p>
+                                </div>
+                                <div class="flex items-center pt-2">
+                                    <label class="text-sm font-medium text-slate-700 mr-3">是否启用</label>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" ng-model="$ctrl.formData.enabled" class="sr-only peer">
+                                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                                <button ng-click="$ctrl.closeForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
+                                <button ng-click="$ctrl.saveForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', 'ConfigService', '$timeout', function(IconService, ConfigService, $timeout) {
+                var ctrl = this;
+                
+                // 获取敏感类型选项数据
+                ctrl.sensitiveTypes = ConfigService.sensitiveTypes;
+                
+                ctrl.list = [
+                    { id: 1, words: '机密,绝密,内部资料', type: ctrl.sensitiveTypes[1], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                    { id: 2, words: '财务报表,核心客户', type: ctrl.sensitiveTypes[2], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
+                ];
+
+                ctrl.showForm = false;
+                ctrl.isEdit = false;
+                ctrl.formData = {};
+                ctrl.selectAll = false;
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+
+                // 批量操作相关方法
+                ctrl.toggleAll = function() {
+                    ctrl.list.forEach(function(item) {
+                        item.selected = ctrl.selectAll;
+                    });
+                };
+
+                ctrl.updateSelectAll = function() {
+                    if (ctrl.list.length === 0) {
+                        ctrl.selectAll = false;
+                        return;
+                    }
+                    ctrl.selectAll = ctrl.list.every(function(item) {
+                        return item.selected;
+                    });
+                };
+
+                ctrl.hasSelected = function() {
+                    return ctrl.list.some(function(item) {
+                        return item.selected;
+                    });
+                };
+
+                ctrl.batchImport = function() {
+                    alert('请选择要导入的 Excel/CSV 文件');
+                };
+
+                ctrl.batchExport = function() {
+                    if (!ctrl.hasSelected()) {
+                        alert('将导出所有通用敏感词数据');
+                    } else {
+                        var selectedCount = ctrl.list.filter(function(item) { return item.selected; }).length;
+                        alert('将导出选中的 ' + selectedCount + ' 项通用敏感词数据');
+                    }
+                };
+
+                ctrl.batchDelete = function() {
+                    var selectedItems = ctrl.list.filter(function(item) { return item.selected; });
+                    if (selectedItems.length === 0) return;
+                    
+                    if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项通用敏感词吗？')) {
+                        ctrl.list = ctrl.list.filter(function(item) { return !item.selected; });
+                        ctrl.selectAll = false;
+                        IconService.refresh();
+                    }
+                };
+
+                ctrl.openForm = function() {
+                    ctrl.isEdit = false;
+                    ctrl.formData = { enabled: true };
+                    ctrl.showForm = true;
+                    IconService.refresh();
+                };
+
+                ctrl.editItem = function(item) {
+                    ctrl.isEdit = true;
+                    ctrl.formData = angular.copy(item);
+                    // 确保选中正确的引用
+                    ctrl.formData.type = ctrl.sensitiveTypes.find(function(t) { return t.id === item.type.id; });
+                    ctrl.showForm = true;
+                    IconService.refresh();
+                };
+
+                ctrl.deleteItem = function(item) {
+                    if (confirm('确定要删除选中的敏感词吗？')) {
+                        var index = ctrl.list.findIndex(function(i) { return i.id === item.id; });
+                        if (index > -1) {
+                            ctrl.list.splice(index, 1);
+                            ctrl.updateSelectAll();
+                        }
+                    }
+                };
+
+                ctrl.closeForm = function() {
+                    ctrl.showForm = false;
+                };
+
+                ctrl.saveForm = function() {
+                    if (!ctrl.formData.words) {
+                        alert('请输入敏感词');
+                        return;
+                    }
+                    if (!ctrl.formData.type) {
+                        alert('请选择敏感类型');
+                        return;
+                    }
+                    
+                    if (ctrl.isEdit) {
+                        var index = ctrl.list.findIndex(function(i) { return i.id === ctrl.formData.id; });
+                        if (index > -1) {
+                            var updatedItem = angular.copy(ctrl.formData);
+                            updatedItem.selected = ctrl.list[index].selected; // 保持选中状态
+                            ctrl.list[index] = updatedItem;
+                        }
+                    } else {
+                        ctrl.formData.id = Date.now();
+                        ctrl.formData.selected = false;
+                        
+                        var d = new Date();
+                        var pad = function(n) { return n < 10 ? '0' + n : n; };
+                        ctrl.formData.createdAt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                        
+                        ctrl.list.push(angular.copy(ctrl.formData));
+                    }
+                    ctrl.showForm = false;
+                    IconService.refresh();
+                };
+            }]
+        });
+    </script>
+</body>
+</html>

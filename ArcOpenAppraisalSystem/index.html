@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN" ng-app="appraisalApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-OAAS档案开放鉴定系统</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 AngularJS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 ECharts 用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<body ng-controller="MainController as ctrl" class="min-h-screen flex flex-col bg-slate-50">
+    
+    <navbar></navbar>
+    <breadcrumb></breadcrumb>
+    
+    <!-- 主体内容区域 -->
+    <main class="flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
+        
+        <!-- 工作台视图 -->
+        <div class="flex-1 flex flex-col gap-5 min-w-0 w-full">
+            <!-- 顶部：统计卡片平铺 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <stat-card title="鉴定开放数量" value="3,240" unit="卷/件" trend="+12" icon="unlock" color-class="text-sky-600"></stat-card>
+                <stat-card title="鉴定受控数量" value="856" unit="卷/件" trend="+3" icon="lock" color-class="text-slate-600"></stat-card>
+                <stat-card title="馆藏档案开放率" value="78.5" unit="%" trend="+0.5%" icon="pie-chart" color-class="text-blue-700"></stat-card>
+                <stat-card title="模型token消耗量" value="1.2M" unit="tokens" trend="+5K" icon="cpu" color-class="text-indigo-700"></stat-card>
+            </div>
+
+            <!-- 全宗数据统计柱状图 -->
+            <fonds-chart></fonds-chart>
+
+            <!-- 任务列表区域 -->
+            <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5">
+                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+                    <h2 class="text-lg font-bold text-slate-800">开放鉴定任务</h2>
+                </div>
+                
+                <!-- 过滤和搜索栏 -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex space-x-3">
+                        <div ng-repeat="tab in ctrl.taskStatusTabs" 
+                             ng-click="ctrl.setActiveTab(tab)"
+                             ng-class="{'text-primary bg-sky-50': ctrl.activeTab === tab, 'text-slate-500 hover:text-slate-800 hover:bg-slate-50': ctrl.activeTab !== tab}"
+                             class="cursor-pointer px-3 py-2 text-sm font-medium rounded-md transition-colors relative">
+                            {{tab}}
+                            <div ng-if="ctrl.activeTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></div>
+                        </div>
+                    </div>
+                    <div class="flex w-64">
+                        <input type="text" placeholder="请输入任务名" ng-model="ctrl.searchText" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-l-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-sky-100 transition-all" />
+                        <button class="bg-primary hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200 text-white px-4 py-1.5 rounded-r-md text-sm transition-colors flex items-center whitespace-nowrap shrink-0">
+                            <i data-lucide="search" class="w-4 h-4 mr-1"></i>
+                            查询
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 任务卡片网格 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <task-card ng-repeat="task in ctrl.tasks | filter:ctrl.searchText" task="task"></task-card>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        var app = angular.module('appraisalApp', []);
+
+        // 重新渲染图标的服务
+        app.service('IconService', function($timeout) {
+            this.refresh = function() {
+                $timeout(function() {
+                    lucide.createIcons();
+                }, 0);
+            };
+        });
+
+        app.controller('MainController', ['IconService', function(IconService) {
+            var ctrl = this;
+            
+            ctrl.tasks = [
+                { title: '鉴定任务', creator: '超级管理员', time: '2023-09-05 14:14', total: 15, checked: 12, opened: 2, progress: 60 },
+                { title: 'A全宗标注任务', creator: '超级管理员', time: '2023-09-06 14:14', total: 10, checked: 1, opened: 0, progress: 100 },
+                { title: 'A全宗任务', creator: '超级管理员', time: '2023-09-07 10:42', total: 6, checked: 5, opened: 0, progress: 40 },
+                { title: 'B全宗任务', creator: '超级管理员', time: '2023-09-18 11:25', total: 3, checked: 2, opened: 1, progress: 100 },
+                { title: 'C全宗任务', creator: '超级管理员', time: '2023-09-18 11:30', total: 6, checked: 6, opened: 0, progress: 60 },
+                { title: 'D全宗任务', creator: '超级管理员', time: '2023-09-25 11:51', total: 10, checked: 0, opened: 0, progress: 60 },
+                { title: 'E全宗鉴定任务', creator: '超级管理员', time: '2023-10-19 13:40', total: 10, checked: 0, opened: 0, progress: 60 },
+                { title: 'P全宗鉴定任务', creator: '超级管理员', time: '2023-10-29 23:47', total: 13, checked: 1, opened: 0, progress: 60 },
+            ];
+
+            ctrl.taskStatusTabs = ['全部', '鉴定中', '审核中', '审批中', '已完成'];
+            ctrl.activeTab = '全部';
+            ctrl.searchText = '';
+
+            ctrl.setActiveTab = function(tab) {
+                ctrl.activeTab = tab;
+            };
+
+            IconService.refresh();
+        }]);
+
+        app.component('navbar', {
+            template: `
+                <nav class="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+                    <!-- 左侧 Logo -->
+                    <div class="flex items-center space-x-2 cursor-pointer flex-1 justify-start">
+                        <div class="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
+                        <span class="text-xl font-bold text-slate-800 tracking-wide whitespace-nowrap">MS-OAAS档案开放鉴定系统</span>
+                    </div>
+                    
+                    <!-- 中间功能菜单 -->
+                    <div class="hidden md:flex space-x-1 flex-none justify-center">
+                        <div ng-repeat="item in $ctrl.menuItems" 
+                             ng-click="!item.children && $ctrl.navigate(item.name)"
+                             ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
+                             class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <span>{{item.name}}</span>
+                            <i ng-if="item.children" data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            
+                            <!-- 二级菜单下拉框 -->
+                            <div ng-if="item.children" class="absolute top-full left-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1">
+                                    <div ng-repeat="child in item.children" 
+                                         ng-click="$ctrl.navigate(child, item.name); $event.stopPropagation();"
+                                         ng-class="{ 'text-primary bg-sky-50': $ctrl.currentSubMenu === child, 'text-slate-600 hover:bg-sky-50 hover:text-primary': $ctrl.currentSubMenu !== child }"
+                                         class="px-4 py-2 transition-colors cursor-pointer block">
+                                        {{child}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧系统栏 -->
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                        <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                    </div>
+                </nav>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentMenu = '工作台';
+                ctrl.currentSubMenu = '';
+
+                ctrl.menuItems = [
+                    { name: '工作台' },
+                    { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
+                    { name: '鉴定任务管理' },
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                ];
+                
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                // 监听面包屑点击回到工作台
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentSubMenu = parentName ? name : '';
+                    ctrl.currentMenu = parentName || name;
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('breadcrumb', {
+            template: `
+                <div class="bg-white px-4 md:px-8 py-2 border-b border-slate-200 flex items-center text-sm text-primary font-medium">
+                    <div class="flex items-center bg-blue-50 px-3 py-1 rounded cursor-pointer transition-colors" ng-class="{'hover:bg-blue-100': $ctrl.currentPath !== '工作台'}" ng-click="$ctrl.navigate('工作台')">
+                        <i data-lucide="layout-grid" class="w-4 h-4 mr-2"></i>
+                        工作台
+                    </div>
+                    <div ng-if="$ctrl.currentPath !== '工作台'" class="flex items-center ml-2 text-slate-500">
+                        <i data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span ng-if="$ctrl.parentPath" class="mr-2">{{$ctrl.parentPath}}</span>
+                        <i ng-if="$ctrl.parentPath" data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>
+                        <span class="text-slate-700">{{$ctrl.currentPath}}</span>
+                        <i data-lucide="x" class="w-3 h-3 ml-2 cursor-pointer hover:text-blue-700" ng-click="$ctrl.navigate('工作台')"></i>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentPath = '工作台';
+                ctrl.parentPath = '';
+
+                                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html'
+                    };
+                    var currentPath = window.location.pathname.split('/').pop() || 'index.html';
+                    if (currentPath === '') currentPath = 'index.html';
+                    if (map[name]) {
+                        if (map[name] === currentPath) {
+                            if (parentName !== undefined) {
+                                ctrl.currentSubMenu = parentName ? name : '';
+                                ctrl.currentMenu = parentName || name;
+                                $rootScope.$broadcast('NAVIGATE', name, parentName);
+                            } else {
+                                $rootScope.$broadcast('NAVIGATE', name);
+                            }
+                            return;
+                        }
+                        window.location.href = map[name];
+                        return;
+                    }
+                    if (parentName !== undefined) {
+                        ctrl.currentSubMenu = parentName ? name : '';
+                        ctrl.currentMenu = parentName || name;
+                        $rootScope.$broadcast('NAVIGATE', name, parentName);
+                    } else {
+                        $rootScope.$broadcast('NAVIGATE', name);
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentPath = name;
+                    ctrl.parentPath = parentName || '';
+                    IconService.refresh();
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('statCard', {
+            bindings: {
+                title: '@',
+                value: '@',
+                unit: '@',
+                trend: '@',
+                icon: '@',
+                colorClass: '@'
+            },
+            template: `
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-slate-500 text-sm">{{$ctrl.title}}</span>
+                        <i data-lucide="{{$ctrl.icon}}" class="w-4 h-4 {{$ctrl.colorClass}}"></i>
+                    </div>
+                    <div class="flex items-end space-x-2">
+                        <span class="text-2xl font-bold text-slate-800">{{$ctrl.value}}</span>
+                        <span class="text-slate-300 text-xs mb-1">{{$ctrl.unit}}</span>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-2 flex items-center justify-between">
+                        <span>较昨日 <span class="text-emerald-500 font-semibold ml-1">{{$ctrl.trend}}</span></span>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', function(IconService) {
+                this.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('taskCard', {
+            bindings: {
+                task: '<'
+            },
+            template: `
+                <div class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer group relative overflow-hidden flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-4 mt-1">
+                        <h3 class="text-base font-bold text-slate-800 group-hover:text-primary transition-colors">{{$ctrl.task.title}}</h3>
+                        <span class="text-xs px-2.5 py-1 rounded-full font-medium ring-1 ring-inset {{$ctrl.statusBg}}">
+                            {{$ctrl.statusText}}
+                        </span>
+                    </div>
+                    
+                    <div class="flex flex-col gap-2 text-sm text-slate-500 leading-relaxed mb-6 flex-1">
+                        <div class="flex items-center">
+                            <i data-lucide="user" class="w-4 h-4 mr-2 text-slate-400"></i>
+                            <span>创建人: <span class="text-slate-600">{{$ctrl.task.creator}}</span></span>
+                        </div>
+                        <div class="flex items-center">
+                            <i data-lucide="clock" class="w-4 h-4 mr-2 text-slate-400"></i>
+                            <span>时间: <span class="text-slate-600">{{$ctrl.task.time}}</span></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mb-4 bg-slate-50/50 rounded-lg">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="text-slate-400 text-xs mb-1">档案总量</span>
+                            <span class="font-semibold text-slate-700">{{$ctrl.task.total}}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center border-l border-slate-200/60">
+                            <span class="text-slate-400 text-xs mb-1">控制量</span>
+                            <span class="font-semibold text-slate-700">{{$ctrl.task.checked}}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center border-l border-slate-200/60">
+                            <span class="text-slate-400 text-xs mb-1">开放量</span>
+                            <span class="font-semibold text-slate-700">{{$ctrl.task.opened}}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto">
+                        <div class="flex justify-between text-xs text-slate-600 mb-2">
+                            <span class="font-medium flex items-center"><i data-lucide="activity" class="w-3.5 h-3.5 mr-1 text-slate-400"></i>当前进度</span>
+                            <span class="font-bold">{{$ctrl.task.progress}}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500 {{$ctrl.statusColor}}" ng-style="{'width': $ctrl.task.progress + '%'}"></div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', function(IconService) {
+                this.$onInit = function() {
+                    var progress = this.task.progress;
+                    var isCompleted = progress === 100;
+                    var isStarted = progress > 0;
+                    
+                    this.statusColor = isCompleted ? 'bg-emerald-500' : (isStarted ? 'bg-blue-500' : 'bg-slate-300');
+                    this.statusBg = isCompleted ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : (isStarted ? 'bg-blue-50 text-blue-700 ring-blue-600/20' : 'bg-slate-50 text-slate-700 ring-slate-600/20');
+                    this.statusText = isCompleted ? '已完成' : (isStarted ? '进行中' : '未开始');
+                    
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('fondsChart', {
+            template: `
+                <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-100 flex-1 flex flex-col">
+                    <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5 mr-2 text-blue-500"></i>
+                            全宗数据统计
+                        </h2>
+                        
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs text-slate-400">
+                                {{$ctrl.currentPage + 1}} / {{$ctrl.totalPages}} 页
+                            </span>
+                            <div class="flex space-x-1">
+                                <button ng-click="$ctrl.handlePrevPage()"
+                                        ng-disabled="$ctrl.currentPage === 0"
+                                        ng-class="$ctrl.currentPage === 0 ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'"
+                                        class="w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                                </button>
+                                <button ng-click="$ctrl.handleNextPage()"
+                                        ng-disabled="$ctrl.currentPage === $ctrl.totalPages - 1"
+                                        ng-class="$ctrl.currentPage === $ctrl.totalPages - 1 ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'"
+                                        class="w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full relative px-2">
+                        <div id="fonds-chart-container" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$timeout', '$scope', function(IconService, $timeout, $scope) {
+                var ctrl = this;
+                ctrl.totalItems = 30;
+                ctrl.itemsPerPage = 10;
+                ctrl.currentPage = 0;
+                ctrl.totalPages = Math.ceil(ctrl.totalItems / ctrl.itemsPerPage);
+                
+                var myChart = null;
+
+                ctrl.handlePrevPage = function() {
+                    ctrl.currentPage = Math.max(0, ctrl.currentPage - 1);
+                    ctrl.updateChartZoom();
+                };
+
+                ctrl.handleNextPage = function() {
+                    ctrl.currentPage = Math.min(ctrl.totalPages - 1, ctrl.currentPage + 1);
+                    ctrl.updateChartZoom();
+                };
+
+                ctrl.updateChartZoom = function() {
+                    if (myChart) {
+                        var startValue = ctrl.currentPage * ctrl.itemsPerPage;
+                        var endValue = startValue + ctrl.itemsPerPage - 1;
+                        myChart.dispatchAction({
+                            type: 'dataZoom',
+                            startValue: startValue,
+                            endValue: endValue
+                        });
+                    }
+                };
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+
+                ctrl.$postLink = function() {
+                    $timeout(function() {
+                        var chartDom = document.getElementById('fonds-chart-container');
+                        myChart = echarts.init(chartDom);
+                        
+                        var categories = Array.from({length: ctrl.totalItems}, function(_, i) { return '全宗' + (i + 1); });
+                        var openedData = Array.from({length: ctrl.totalItems}, function() { return Math.floor(Math.random() * 500) + 50; });
+                        var controlledData = Array.from({length: ctrl.totalItems}, function() { return Math.floor(Math.random() * 200) + 10; });
+
+                        var option = {
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: { type: 'shadow' },
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#e2e8f0',
+                                textStyle: { color: '#334155' },
+                                confine: true,
+                                appendToBody: true
+                            },
+                            legend: {
+                                data: ['开放数量', '受控数量'],
+                                right: '10%',
+                                top: 0,
+                                icon: 'circle',
+                                textStyle: { color: '#64748b' }
+                            },
+                            grid: {
+                                left: '4%',
+                                right: '10%',
+                                bottom: '5%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                axisLine: { lineStyle: { color: '#cbd5e1' } },
+                                axisTick: { alignWithLabel: true, lineStyle: { color: '#cbd5e1' } },
+                                axisLabel: { color: '#64748b', interval: 0, margin: 10 }, 
+                                boundaryGap: true 
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: '单位：卷/件',
+                                nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, -20] },
+                                axisLabel: { color: '#64748b' },
+                                splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } }
+                            },
+                            dataZoom: [
+                                {
+                                    type: 'inside',
+                                    xAxisIndex: [0],
+                                    startValue: 0,
+                                    endValue: ctrl.itemsPerPage - 1,
+                                    zoomLock: true,
+                                    moveOnMouseMove: false,
+                                    moveOnMouseWheel: false
+                                }
+                            ],
+                            series: [
+                                {
+                                    name: '开放数量',
+                                    type: 'bar',
+                                    barWidth: '34%',
+                                    barMaxWidth: 28,
+                                    barGap: '15%',
+                                    itemStyle: { color: '#0284c7', borderRadius: [4, 4, 0, 0] }, 
+                                    data: openedData
+                                },
+                                {
+                                    name: '受控数量',
+                                    type: 'bar',
+                                    barWidth: '34%',
+                                    barMaxWidth: 28,
+                                    itemStyle: { color: '#475569', borderRadius: [4, 4, 0, 0] }, 
+                                    data: controlledData
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+
+                        var handleResize = function() { myChart.resize(); };
+                        window.addEventListener('resize', handleResize);
+
+                        $scope.$on('$destroy', function() {
+                            window.removeEventListener('resize', handleResize);
+                            myChart.dispose();
+                        });
+                    });
+                };
+            }]
+        });
+    </script>
+</body>
+</html>
