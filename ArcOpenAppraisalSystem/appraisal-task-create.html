@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN" ng-app="appraisalApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-OAAS档案开放鉴定系统 - 新建任务</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="./lib/tailwindcss.js"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 AngularJS -->
+    <script src="./lib/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="./lib/lucide.min.js"></script>
+    <link rel="stylesheet" href="./main.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body ng-controller="MainController as ctrl" class="h-screen overflow-hidden flex flex-col bg-slate-50">
+    
+    <navbar></navbar>
+    <breadcrumb></breadcrumb>
+    
+    <!-- 主体内容区域 -->
+    <main class="overflow-y-auto flex-1 p-4 md:px-8 flex flex-col gap-5 w-full box-border relative max-w-5xl mx-auto">
+        <appraisal-task-create class="flex-1 flex flex-col min-w-0 w-full"></appraisal-task-create>
+    </main>
+
+    <script>
+        var app = angular.module('appraisalApp', []);
+
+        // 重新渲染图标的服务
+        app.service('IconService', function($timeout) {
+            var refreshPromise;
+            this.refresh = function() {
+                if (refreshPromise) $timeout.cancel(refreshPromise);
+                refreshPromise = 
+                $timeout(function() {
+                    lucide.createIcons();
+                    refreshPromise = null;
+                }, 50, false);
+            };
+        });
+
+        app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
+            var ctrl = this;
+            
+            // 初始化导航状态
+            $timeout(function() {
+                $rootScope.$broadcast('NAVIGATE', '新建任务', '鉴定任务管理');
+            });
+        }]);
+
+        // 多选下拉组件
+        app.component('multiSelect', {
+            bindings: {
+                options: '=',
+                placeholder: '@',
+                emptyMessage: '@'
+            },
+            template: `
+                <div class="relative" ng-click="$event.stopPropagation()">
+                    <div class="w-full px-3 py-2 border border-slate-300 rounded-md focus-within:ring-2 focus-within:ring-sky-100 focus-within:border-primary bg-white cursor-pointer min-h-[38px] flex flex-wrap gap-1 items-center" 
+                         ng-click="!$ctrl.isEmpty() && ($ctrl.isOpen = !$ctrl.isOpen)"
+                         ng-class="{'bg-slate-50 cursor-not-allowed': $ctrl.isEmpty()}">
+                        
+                        <!-- 占位符或空提示 -->
+                        <span ng-if="!$ctrl.hasSelected() && !$ctrl.isEmpty()" class="text-slate-400 text-sm">{{$ctrl.placeholder}}</span>
+                        <span ng-if="$ctrl.isEmpty()" class="text-slate-400 text-sm">{{$ctrl.emptyMessage || '无可用选项'}}</span>
+                        
+                        <!-- 已选项 -->
+                        <span ng-repeat="opt in $ctrl.options | filter:{selected: true}" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
+                            {{opt.name}}
+                            <i data-lucide="x" class="w-3 h-3 ml-1 cursor-pointer hover:text-sky-900" ng-click="opt.selected = false; $event.stopPropagation(); $ctrl.updateIcons()"></i>
+                        </span>
+                        
+                        <i data-lucide="chevron-down" class="w-4 h-4 ml-auto text-slate-400 transition-transform" ng-class="{'rotate-180': $ctrl.isOpen}"></i>
+                    </div>
+                    
+                    <!-- 下拉列表 -->
+                    <div ng-show="$ctrl.isOpen" class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto custom-scrollbar">
+                        <div class="p-2.5 hover:bg-slate-50 cursor-pointer flex items-center transition-colors" 
+                             ng-repeat="opt in $ctrl.options" 
+                             ng-click="opt.selected = !opt.selected; $ctrl.updateIcons(); $event.stopPropagation();">
+                            <div class="w-4 h-4 border rounded mr-2 flex items-center justify-center flex-shrink-0 transition-colors" 
+                                 ng-class="opt.selected ? 'bg-primary border-primary' : 'border-slate-300'">
+                                <i data-lucide="check" class="w-3 h-3 text-white" ng-show="opt.selected"></i>
+                            </div>
+                            <span class="text-sm text-slate-700 select-none">{{opt.name}}</span>
+                        </div>
+                    </div>
+                </div>
+            `,
+            controller: ['$scope', '$document', 'IconService', '$timeout', function($scope, $document, IconService, $timeout) {
+                var ctrl = this;
+                ctrl.isOpen = false;
+                
+                ctrl.isEmpty = function() {
+                    return !ctrl.options || ctrl.options.length === 0;
+                };
+
+                ctrl.hasSelected = function() {
+                    if (ctrl.isEmpty()) return false;
+                    return ctrl.options.some(function(o) { return o.selected; });
+                };
+
+                ctrl.updateIcons = function() {
+                    $timeout(function() { IconService.refresh(); }, 0);
+                };
+
+                var clickHandler = function() {
+                    if (ctrl.isOpen) {
+                        $scope.$apply(function() {
+                            ctrl.isOpen = false;
+                        });
+                    }
+                };
+
+                $document.on('click', clickHandler);
+                $scope.$on('$destroy', function() {
+                    $document.off('click', clickHandler);
+                });
+
+                ctrl.$onInit = function() {
+                    ctrl.updateIcons();
+                };
+            }]
+        });
+
+        app.component('navbar', {
+            template: `
+                <nav class="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
+                    <div class="flex items-center space-x-2 cursor-pointer flex-1 justify-start">
+                        <div class="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
+                        <span class="text-xl font-bold text-slate-800 tracking-wide whitespace-nowrap">MS-OAAS档案开放鉴定系统</span>
+                    </div>
+                    <div class="hidden md:flex space-x-1 flex-none justify-center">
+                        <div ng-repeat="item in $ctrl.menuItems" 
+                             ng-click="!item.children && $ctrl.navigate(item.name)"
+                             ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
+                             class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <span>{{item.name}}</span>
+                            <i ng-if="item.children" data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            <div ng-if="item.children" class="absolute top-full left-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1">
+                                    <div ng-repeat="child in item.children" 
+                                         ng-click="$ctrl.navigate(child, item.name); $event.stopPropagation();"
+                                         ng-class="{ 'text-primary bg-sky-50': $ctrl.currentSubMenu === child, 'text-slate-600 hover:bg-sky-50 hover:text-primary': $ctrl.currentSubMenu !== child }"
+                                         class="px-4 py-2 transition-colors cursor-pointer block">
+                                        {{child}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                        <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
+                    </div>
+                </nav>
+            `,
+            controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
+                var ctrl = this;
+                ctrl.currentMenu = '鉴定任务管理';
+                ctrl.currentSubMenu = '';
+
+                ctrl.menuItems = [
+                    { name: '工作台' },
+                    { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
+                    { name: '鉴定任务管理' },
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                ];
+                
+                ctrl.navigate = function(name, parentName) {
+                    var map = {
+                        '工作台': 'index.html',
+                        '敏感类型管理': 'sensitive-type.html',
+                        '敏感内容管理': 'sensitive-content.html',
+                        '通用敏感词库': 'general-sensitive-word.html',
+                        '全宗配置': 'fonds-config.html',
+                        '全宗敏感词库': 'fonds-sensitive-word.html',
+                        '错检漏检库': 'error-omission-db.html',
+                        '鉴定任务管理': 'appraisal-task.html',
+                        '元数据配置': 'metadata-config.html'
+                    };
+                    if (map[name]) {
+                        window.location.href = map[name];
+                    }
+                };
+
+                $rootScope.$on('NAVIGATE', function(e, name, parentName) {
+                    ctrl.currentSubMenu = parentName ? name : '';
+                    ctrl.currentMenu = parentName || name;
+                });
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+
+        app.component('breadcrumb', {
+            template: `
+                <div class="bg-white border-b border-slate-200 flex items-center text-sm font-medium relative" style="height: 40px; padding-left: 1rem; padding-right: 1rem; overflow-x: auto; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none;">
+                    <style>
+                        .custom-tab-scroll::-webkit-scrollbar { display: none; }
+                    </style>
+                    <div class="flex items-center h-full custom-tab-scroll w-full">
+                        <div ng-repeat="tab in $ctrl.tabs" 
+                             ng-click="$ctrl.goToTab(tab)"
+                             ng-right-click="$ctrl.showContextMenu($event, tab)"
+                             class="flex items-center h-full px-4 border-r border-slate-200 cursor-pointer transition-colors relative group flex-shrink-0"
+                             ng-class="{'bg-sky-50 text-primary border-t-2 border-t-primary': tab.active, 'text-slate-600 hover:bg-slate-50 border-t-2 border-t-transparent': !tab.active}">
+                            <i ng-if="tab.name === '工作台'" data-lucide="layout-grid" class="w-4 h-4 mr-2"></i>
+                            <span class="select-none">{{tab.name}}</span>
+                            <div ng-if="tab.name !== '工作台'" 
+                                 ng-click="$ctrl.closeTab($event, tab)" 
+                                 class="ml-2 w-4 h-4 rounded-full flex items-center justify-center hover:bg-slate-200 hover:text-red-500 transition-colors"
+                                 ng-class="{'opacity-100': tab.active, 'opacity-0 group-hover:opacity-100': !tab.active}">
+                                <i data-lucide="x" class="w-3 h-3"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Context Menu -->
+                    <div ng-if="$ctrl.contextMenu.show" 
+                         class="fixed z-[100] w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1"
+                         ng-style="{'left': $ctrl.contextMenu.x + 'px', 'top': $ctrl.contextMenu.y + 'px'}">
+                        <div ng-click="$ctrl.closeAllTabs()" class="px-4 py-2 hover:bg-slate-50 cursor-pointer text-slate-700 text-sm">全部关闭</div>
+                        <div ng-click="$ctrl.closeOtherTabs()" class="px-4 py-2 hover:bg-slate-50 cursor-pointer text-slate-700 text-sm">关闭其他</div>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$rootScope', '$scope', '$document', '$timeout', function(IconService, $rootScope, $scope, $document, $timeout) {
+                var ctrl = this;
+                
+                var urlMap = {
+                    '工作台': 'index.html',
+                    '敏感类型管理': 'sensitive-type.html',
+                    '敏感内容管理': 'sensitive-content.html',
+                    '通用敏感词库': 'general-sensitive-word.html',
+                    '全宗配置': 'fonds-config.html',
+                    '全宗敏感词库': 'fonds-sensitive-word.html',
+                    '错检漏检库': 'error-omission-db.html',
+                    '鉴定任务管理': 'appraisal-task.html',
+                    '新建任务': 'appraisal-task-create.html',
+                    '查看任务': 'appraisal-task-view.html',
+                    '修改任务': 'appraisal-task-edit.html',
+                    '元数据配置': 'metadata-config.html'
+                };
+                
+                var nameMap = {};
+                for (var key in urlMap) { nameMap[urlMap[key]] = key; }
+                
+                ctrl.contextMenu = { show: false, x: 0, y: 0, targetTab: null };
+                
+                var currentUrl = 'index.html';
+                var href = window.location.href;
+                var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
+                    return urlMap[b].length - urlMap[a].length;
+                });
+                for (var i = 0; i < sortedKeys.length; i++) {
+                    var key = sortedKeys[i];
+                    if (href.indexOf(urlMap[key]) !== -1) {
+                        currentUrl = urlMap[key];
+                        break;
+                    }
+                }
+                
+                var currentName = nameMap[currentUrl] || '工作台';
+                
+                var storedTabs = localStorage.getItem('oaas_opened_tabs');
+                if (storedTabs) {
+                    try {
+                        ctrl.tabs = JSON.parse(storedTabs);
+                    } catch(e) {
+                        ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                    }
+                } else {
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                }
+                
+                if (!ctrl.tabs.find(function(t) { return t.name === '工作台'; })) {
+                    ctrl.tabs.unshift({ name: '工作台', url: 'index.html', active: false });
+                }
+                
+                var existingTab = ctrl.tabs.find(function(t) { return t.name === currentName; });
+                if (!existingTab && currentName) {
+                    ctrl.tabs.push({ name: currentName, url: currentUrl, active: true });
+                }
+                
+                ctrl.tabs.forEach(function(t) {
+                    t.active = (t.name === currentName);
+                });
+                
+                ctrl.saveTabs = function() {
+                    localStorage.setItem('oaas_opened_tabs', JSON.stringify(ctrl.tabs));
+                };
+                
+                ctrl.saveTabs();
+                
+                ctrl.goToTab = function(tab) {
+                    if (tab.name !== currentName) {
+                        window.location.href = tab.url;
+                    }
+                };
+                
+                ctrl.closeTab = function(e, tab) {
+                    if (e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }
+                    if (tab.name === '工作台') return;
+                    
+                    var index = ctrl.tabs.indexOf(tab);
+                    if (index > -1) {
+                        ctrl.tabs.splice(index, 1);
+                        ctrl.saveTabs();
+                        
+                        if (tab.active) {
+                            var nextTab = ctrl.tabs[index] || ctrl.tabs[index - 1] || ctrl.tabs[0];
+                            window.location.href = nextTab.url;
+                        }
+                    }
+                    ctrl.contextMenu.show = false;
+                };
+                
+                ctrl.showContextMenu = function(e, tab) {
+                    e.preventDefault();
+                    ctrl.contextMenu.show = true;
+                    ctrl.contextMenu.x = e.clientX;
+                    ctrl.contextMenu.y = e.clientY;
+                    ctrl.contextMenu.targetTab = tab;
+                };
+                
+                ctrl.closeAllTabs = function() {
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: currentName === '工作台' }];
+                    ctrl.saveTabs();
+                    ctrl.contextMenu.show = false;
+                    if (currentName !== '工作台') {
+                        window.location.href = 'index.html';
+                    }
+                };
+                
+                ctrl.closeOtherTabs = function() {
+                    var target = ctrl.contextMenu.targetTab;
+                    if (!target) return;
+                    
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: currentName === '工作台' }];
+                    if (target.name !== '工作台') {
+                        ctrl.tabs.push(target);
+                    }
+                    ctrl.saveTabs();
+                    ctrl.contextMenu.show = false;
+                    
+                    if (currentName !== target.name && currentName !== '工作台') {
+                        window.location.href = target.url;
+                    } else if (currentName === target.name) {
+                        // Keep current tab active
+                    }
+                };
+                
+                var closeMenuHandler = function(e) {
+                    if (ctrl.contextMenu.show) {
+                        $scope.$apply(function() {
+                            ctrl.contextMenu.show = false;
+                        });
+                    }
+                };
+                
+                $document.on('click', closeMenuHandler);
+                $scope.$on('$destroy', function() {
+                    $document.off('click', closeMenuHandler);
+                });
+                
+                ctrl.$onInit = function() {
+                    $timeout(function() { IconService.refresh(); }, 0);
+                };
+            }]
+        });
+
+        // Ensure ng-right-click is registered
+        if (!app._invokeQueue.some(function(item) { return item[1] === 'directive' && item[2][0] === 'ngRightClick'; })) {
+            app.directive('ngRightClick', ['$parse', function($parse) {
+                return function(scope, element, attrs) {
+                    var fn = $parse(attrs.ngRightClick);
+                    element.bind('contextmenu', function(event) {
+                        scope.$apply(function() {
+                            event.preventDefault();
+                            fn(scope, {$event: event});
+                        });
+                    });
+                };
+            }]);
+        }
+
+        app.component('appraisalTaskCreate', {
+            template: `
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-6 flex flex-col">
+                    <div class="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+                        <h2 class="text-xl font-bold text-slate-800 flex items-center">
+                            <i data-lucide="file-plus" class="w-6 h-6 mr-2 text-primary"></i>
+                            新建鉴定任务
+                        </h2>
+                    </div>
+                    
+                    <div class="flex-1 w-full max-w-3xl mx-auto">
+                        <form name="taskForm" class="space-y-6" novalidate>
+                            
+                            <!-- 任务名称 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2 flex items-center">
+                                    <span class="text-red-500 mr-1">*</span>任务名称
+                                </label>
+                                <div class="flex-1">
+                                    <input type="text" name="taskName" ng-model="$ctrl.task.name" required placeholder="请输入任务名称" 
+                                           class="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100 transition-all"
+                                           ng-class="{'border-red-300 focus:border-red-500': taskForm.taskName.$invalid && taskForm.taskName.$dirty, 'border-slate-300 focus:border-primary': !(taskForm.taskName.$invalid && taskForm.taskName.$dirty)}" />
+                                    <p class="text-xs text-red-500 mt-1" ng-show="taskForm.taskName.$invalid && taskForm.taskName.$dirty">请输入任务名称</p>
+                                </div>
+                            </div>
+
+                            <!-- 选择全宗 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2 flex items-center">
+                                    <span class="text-red-500 mr-1">*</span>选择全宗
+                                </label>
+                                <div class="flex-1 relative">
+                                    <select name="fonds" ng-model="$ctrl.task.fonds" required ng-change="$ctrl.onFondsChange()"
+                                            class="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100 transition-all appearance-none bg-white"
+                                            ng-class="{'border-red-300 focus:border-red-500': taskForm.fonds.$invalid && taskForm.fonds.$dirty, 'border-slate-300 focus:border-primary': !(taskForm.fonds.$invalid && taskForm.fonds.$dirty)}">
+                                        <option value="">请选择全宗</option>
+                                        <option ng-repeat="f in $ctrl.fondsList" value="{{f}}">{{f}}</option>
+                                    </select>
+                                    <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 top-3 text-slate-400 pointer-events-none"></i>
+                                    <p class="text-xs text-red-500 mt-1" ng-show="taskForm.fonds.$invalid && taskForm.fonds.$dirty">请选择全宗</p>
+                                </div>
+                            </div>
+
+                            <!-- 鉴定年度 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2 flex items-center">
+                                    <span class="text-red-500 mr-1">*</span>鉴定年度
+                                </label>
+                                <div class="flex-1">
+                                    <input type="text" name="year" ng-model="$ctrl.task.year" required ng-pattern="/^\\d{4}$/" placeholder="请输入4位年度，如：2023" 
+                                           class="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100 transition-all"
+                                           ng-class="{'border-red-300 focus:border-red-500': taskForm.year.$invalid && taskForm.year.$dirty, 'border-slate-300 focus:border-primary': !(taskForm.year.$invalid && taskForm.year.$dirty)}" />
+                                    <p class="text-xs text-red-500 mt-1" ng-show="taskForm.year.$error.required && taskForm.year.$dirty">请输入鉴定年度</p>
+                                    <p class="text-xs text-red-500 mt-1" ng-show="taskForm.year.$error.pattern && taskForm.year.$dirty">请输入有效的4位年度数字</p>
+                                </div>
+                            </div>
+
+                            <!-- 选择敏感内容 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2">
+                                    选择敏感内容
+                                </label>
+                                <div class="flex-1">
+                                    <multi-select options="$ctrl.sensitiveContentList" placeholder="请选择敏感内容 (可多选)"></multi-select>
+                                </div>
+                            </div>
+
+                            <!-- 选择通用敏感词库 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2">
+                                    选择通用敏感词库
+                                </label>
+                                <div class="flex-1">
+                                    <multi-select options="$ctrl.generalWordList" placeholder="请选择通用敏感词库 (可多选)"></multi-select>
+                                </div>
+                            </div>
+
+                            <!-- 选择全宗敏感词库 -->
+                            <div class="flex flex-col md:flex-row md:items-start gap-2 md:gap-4">
+                                <label class="md:w-32 text-sm font-medium text-slate-700 mt-2">
+                                    选择全宗敏感词库
+                                </label>
+                                <div class="flex-1">
+                                    <multi-select options="$ctrl.currentFondsWordList" placeholder="根据选择的全宗自动获取" empty-message="该全宗未配置全宗敏感词库"></multi-select>
+                                </div>
+                            </div>
+
+                        </form>
+
+                        <!-- 添加鉴定数据 -->
+                        <div class="mt-8 border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center">
+                                    <i data-lucide="database" class="w-4 h-4 mr-2 text-primary"></i>
+                                    添加鉴定数据
+                                </h3>
+                            </div>
+                            <div class="p-5 space-y-5 bg-white">
+                                <!-- 选项单选 -->
+                                <div class="flex items-center space-x-6">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" ng-model="$ctrl.dataMode" value="upload" class="text-primary focus:ring-primary w-4 h-4 border-slate-300">
+                                        <span class="ml-2 text-sm text-slate-700">上传数据</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" ng-model="$ctrl.dataMode" value="fetch" class="text-primary focus:ring-primary w-4 h-4 border-slate-300">
+                                        <span class="ml-2 text-sm text-slate-700">获取馆藏系统数据</span>
+                                    </label>
+                                </div>
+
+                                <!-- 上传数据内容 -->
+                                <div ng-if="$ctrl.dataMode === 'upload'" class="space-y-4 bg-slate-50 p-4 rounded-md border border-slate-100 animate-[fadeIn_0.2s_ease-out]">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-700 mb-1">档案门类</label>
+                                            <select ng-model="$ctrl.uploadData.category" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100">
+                                                <option value="">请选择门类</option>
+                                                <option ng-repeat="cat in $ctrl.metadataCategories" value="{{cat.categoryNo}}">{{cat.categoryName}}</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-700 mb-1">匹配方式</label>
+                                            <select ng-model="$ctrl.uploadData.matchMethod" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100">
+                                                <option value="archiveNo">按照档号匹配</option>
+                                                <option value="title">按照文件题名匹配</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-700 mb-1">上传目录</label>
+                                            <div class="flex items-center">
+                                                <input type="file" class="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-primary hover:file:bg-sky-100">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-700 mb-1">上传全文</label>
+                                            <div class="flex items-center">
+                                                <input type="file" class="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-primary hover:file:bg-sky-100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 获取馆藏系统数据内容 -->
+                                <div ng-if="$ctrl.dataMode === 'fetch'" class="space-y-4 animate-[fadeIn_0.2s_ease-out]">
+                                    <div class="flex flex-col md:flex-row md:items-end gap-4 bg-slate-50 p-4 rounded-md border border-slate-100">
+                                        <div class="flex-1">
+                                            <label class="block text-xs font-medium text-slate-700 mb-1">档案门类 <span class="text-red-500">*</span></label>
+                                            <select ng-model="$ctrl.fetchData.category" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-100 bg-white">
+                                                <option value="">请选择档案门类</option>
+                                                <option ng-repeat="cat in $ctrl.metadataCategories" value="{{cat.categoryNo}}">{{cat.categoryName}}</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <button type="button" ng-click="$ctrl.fetchArchiveData()" class="bg-primary text-white hover:bg-sky-800 px-4 py-2 rounded-md text-sm transition-colors flex items-center h-[38px]">
+                                                <i data-lucide="download-cloud" class="w-4 h-4 mr-2"></i>
+                                                获取数据
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div ng-if="$ctrl.fetchedData.length > 0" class="overflow-x-auto border border-slate-200 rounded-md">
+                                        <table class="w-full text-left border-collapse text-sm">
+                                            <thead>
+                                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                                    <th class="px-3 py-2 font-medium whitespace-nowrap">全宗号</th>
+                                                    <th class="px-3 py-2 font-medium whitespace-nowrap">档号</th>
+                                                    <th class="px-3 py-2 font-medium">文件题名</th>
+                                                    <th class="px-3 py-2 font-medium whitespace-nowrap">责任者</th>
+                                                    <th class="px-3 py-2 font-medium whitespace-nowrap">保管期限</th>
+                                                    <th class="px-3 py-2 font-medium whitespace-nowrap">成文日期</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr ng-repeat="item in $ctrl.fetchedData" class="border-b border-slate-100 hover:bg-slate-50">
+                                                    <td class="px-3 py-2 text-slate-800 whitespace-nowrap">{{item.fondsNo}}</td>
+                                                    <td class="px-3 py-2 text-slate-800 whitespace-nowrap">{{item.archiveNo}}</td>
+                                                    <td class="px-3 py-2 text-slate-800">{{item.title}}</td>
+                                                    <td class="px-3 py-2 text-slate-800 whitespace-nowrap">{{item.responsible}}</td>
+                                                    <td class="px-3 py-2 text-slate-800 whitespace-nowrap">{{item.retention}}</td>
+                                                    <td class="px-3 py-2 text-slate-800 whitespace-nowrap">{{item.date}}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div ng-if="$ctrl.isFetching" class="py-8 text-center text-slate-500 text-sm">
+                                        正在获取数据...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 底部操作按钮 -->
+                    <div class="mt-10 pt-6 border-t border-slate-100 flex justify-end space-x-3">
+                        <button type="button" ng-click="$ctrl.cancel()" class="px-6 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition-colors text-sm font-medium">
+                            取消
+                        </button>
+                        <button type="button" ng-click="$ctrl.submit()" ng-disabled="taskForm.$invalid" 
+                                class="px-6 py-2 bg-primary text-white rounded-md transition-colors text-sm font-medium flex items-center"
+                                ng-class="{'opacity-50 cursor-not-allowed': taskForm.$invalid, 'hover:bg-sky-800 shadow-sm': !taskForm.$invalid}">
+                            <i data-lucide="save" class="w-4 h-4 mr-1.5"></i>
+                            保存任务
+                        </button>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', function(IconService) {
+                var ctrl = this;
+                
+                // 表单数据模型
+                ctrl.task = {
+                    name: '',
+                    fonds: '',
+                    year: ''
+                };
+
+                // 添加鉴定数据配置
+                ctrl.dataMode = 'upload'; // 默认选项: upload | fetch
+                ctrl.uploadData = {
+                    category: '',
+                    matchMethod: 'archiveNo'
+                };
+                ctrl.fetchData = {
+                    category: ''
+                };
+                
+                // 获取门类数据
+                var storedCategories = localStorage.getItem('oaas_metadata_category_list');
+                ctrl.metadataCategories = storedCategories ? JSON.parse(storedCategories) : [];
+
+                ctrl.fetchedData = [];
+                ctrl.isFetching = false;
+                ctrl.fetchArchiveData = function() {
+                    if (!ctrl.fetchData.category) {
+                        alert('请先选择档案门类');
+                        return;
+                    }
+                    ctrl.isFetching = true;
+                    ctrl.fetchedData = [];
+                    // 模拟异步获取数据
+                    setTimeout(function() {
+                        ctrl.isFetching = false;
+                        ctrl.fetchedData = [
+                            { fondsNo: 'J001', archiveNo: 'J001-WS-2023-0001', title: '关于推进城市数字化转型的指导意见', responsible: '市政府办公厅', retention: '永久', date: '2023-01-15' },
+                            { fondsNo: 'J001', archiveNo: 'J001-WS-2023-0002', title: '2023年重点民生实事项目安排', responsible: '市发改委', retention: '30年', date: '2023-02-10' },
+                            { fondsNo: 'J001', archiveNo: 'J001-WS-2023-0003', title: '关于表彰全市优秀教育工作者的决定', responsible: '市教育局', retention: '10年', date: '2023-09-08' },
+                            { fondsNo: 'J001', archiveNo: 'J001-WS-2023-0004', title: '高新技术企业扶持政策实施细则', responsible: '市科技局', retention: '永久', date: '2023-11-20' }
+                        ];
+                        // 强制更新视图
+                        var $scope = angular.element(document.querySelector('appraisal-task-create')).scope();
+                        if ($scope) $scope.$apply();
+                    }, 800);
+                };
+
+                // 从 localStorage 获取真实全宗配置
+                var storedFonds = localStorage.getItem('oaas_fonds_list');
+                var fondsData = storedFonds ? JSON.parse(storedFonds) : [];
+                if (fondsData.length === 0) {
+                    fondsData = [
+                        { id: 1, fondsNo: 'J001', fondsName: '市政府办公厅', selected: false },
+                        { id: 2, fondsNo: 'J002', fondsName: '市发改委', selected: false },
+                        { id: 3, fondsNo: 'J003', fondsName: '市教育局', selected: false },
+                        { id: 4, fondsNo: 'J004', fondsName: '市科技局', selected: false }
+                    ];
+                    localStorage.setItem('oaas_fonds_list', JSON.stringify(fondsData));
+                }
+                ctrl.fondsList = fondsData.map(function(f) { return f.fondsName; });
+                
+                // 从 localStorage 获取真实的敏感内容管理数据
+                var storedContents = localStorage.getItem('oaas_sensitive_contents');
+                var contentsData = storedContents ? JSON.parse(storedContents) : [];
+                if (contentsData.length === 0) {
+                    var stype0 = { id: 1, name: '个人隐私', controlFlag: '受控' };
+                    var stype1 = { id: 2, name: '国家秘密', controlFlag: '受控' };
+                    var stype2 = { id: 3, name: '商业秘密', controlFlag: '受控' };
+                    var stype3 = { id: 4, name: '普通公开', controlFlag: '开放' };
+                    contentsData = [
+                        { id: 1, title: '居民身份证号码', content: '身份证号', type: stype0, createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                        { id: 2, title: '市委常委会议纪要', content: '涉密会议纪要', type: stype1, createdAt: '2023-10-02 14:20:00', enabled: true, selected: false },
+                        { id: 3, title: 'XX系统核心加密算法', content: '核心算法代码', type: stype2, createdAt: '2023-10-03 09:30:00', enabled: false, selected: false },
+                        { id: 4, title: '市政府信息公开年报', content: '政府公开年度报告', type: stype3, createdAt: '2023-10-04 16:45:00', enabled: true, selected: false }
+                    ];
+                    localStorage.setItem('oaas_sensitive_contents', JSON.stringify(contentsData));
+                }
+                
+                // 只显示启用的敏感内容，显示标题
+                ctrl.sensitiveContentList = contentsData.filter(function(item) {
+                    return item.enabled;
+                }).map(function(item) {
+                    return { id: item.id, name: item.title, selected: false };
+                });
+
+                // 从 localStorage 获取真实的通用敏感词库数据
+                var storedGeneralWords = localStorage.getItem('oaas_general_sensitive_words');
+                var generalWordsData = storedGeneralWords ? JSON.parse(storedGeneralWords) : [];
+                if (generalWordsData.length === 0) {
+                    var stype1 = { id: 2, name: '国家秘密', controlFlag: '受控' };
+                    var stype2 = { id: 3, name: '商业秘密', controlFlag: '受控' };
+                    generalWordsData = [
+                        { id: 1, title: '通用政治敏感词库', words: '机密,绝密,内部资料', type: stype1, createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                        { id: 2, title: '通用商业秘密词库', words: '财务报表,核心客户', type: stype2, createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
+                    ];
+                    localStorage.setItem('oaas_general_sensitive_words', JSON.stringify(generalWordsData));
+                }
+                
+                // 只显示启用的通用敏感词库，显示标题
+                ctrl.generalWordList = generalWordsData.filter(function(item) {
+                    return item.enabled;
+                }).map(function(item) {
+                    return { id: item.id, name: item.title, selected: false };
+                });
+
+                // 从 localStorage 获取真实的全宗敏感词库并构建映射
+                var storedFondsWords = localStorage.getItem('oaas_fonds_sensitive_words');
+                var fondsWordsData = storedFondsWords ? JSON.parse(storedFondsWords) : [];
+                if (fondsWordsData.length === 0) {
+                    var defaultType1 = { id: 1, name: '个人隐私', controlFlag: '受控' };
+                    var defaultType3 = { id: 3, name: '商业秘密', controlFlag: '受控' };
+                    fondsWordsData = [
+                        { id: 1, words: '市长信箱,信访记录', type: defaultType1, fonds: fondsData[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                        { id: 2, words: '内部考核,项目评估', type: defaultType3, fonds: fondsData[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
+                    ];
+                    localStorage.setItem('oaas_fonds_sensitive_words', JSON.stringify(fondsWordsData));
+                }
+                
+                var fondsWordMap = {};
+                fondsWordsData.forEach(function(item) {
+                    if (item.enabled) {
+                        var fName = item.fonds.fondsName;
+                        if (!fondsWordMap[fName]) {
+                            fondsWordMap[fName] = [];
+                        }
+                        fondsWordMap[fName].push({
+                            id: item.id,
+                            name: item.words + ' (' + item.type.name + ')',
+                            selected: false
+                        });
+                    }
+                });
+
+                ctrl.currentFondsWordList = [];
+
+                // 全宗下拉切换事件，级联更新全宗敏感词库
+                ctrl.onFondsChange = function() {
+                    if (ctrl.task.fonds && fondsWordMap[ctrl.task.fonds]) {
+                        // 深拷贝以重置选中状态
+                        ctrl.currentFondsWordList = JSON.parse(JSON.stringify(fondsWordMap[ctrl.task.fonds]));
+                    } else {
+                        ctrl.currentFondsWordList = [];
+                    }
+                    // 重新渲染图标
+                    setTimeout(function() { IconService.refresh(); }, 0);
+                };
+
+                ctrl.cancel = function() {
+                    window.location.href = 'appraisal-task.html';
+                };
+
+                ctrl.submit = function() {
+                    // 收集已选项的逻辑
+                    var selectedContents = ctrl.sensitiveContentList.filter(function(o) { return o.selected; });
+                    var selectedGeneralWords = ctrl.generalWordList.filter(function(o) { return o.selected; });
+                    var selectedFondsWords = ctrl.currentFondsWordList.filter(function(o) { return o.selected; });
+                    
+                    console.log('提交的数据:', {
+                        base: ctrl.task,
+                        contents: selectedContents,
+                        generalWords: selectedGeneralWords,
+                        fondsWords: selectedFondsWords
+                    });
+                    
+                    // 模拟保存成功
+                    alert('任务创建成功！');
+                    window.location.href = 'appraisal-task.html';
+                };
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+            }]
+        });
+    </script>
+</body>
+</html>
