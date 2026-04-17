@@ -73,7 +73,7 @@
                     
                     <!-- 中间功能菜单 -->
                     <div class="hidden md:flex space-x-1 flex-none justify-center">
-                        <div ng-repeat="item in $ctrl.menuItems" 
+                        <div ng-repeat="item in $ctrl.filteredMenuItems" 
                              ng-click="!item.children && $ctrl.navigate(item.name)"
                              ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
                              class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
@@ -95,18 +95,41 @@
                     </div>
 
                     <!-- 右侧系统栏 -->
-                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end relative">
                         <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
-                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        
+                        <!-- 用户切换下拉 -->
+                        <div class="relative group cursor-pointer flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold overflow-hidden" title="{{$ctrl.currentUser.realName || '未登录'}}">
+                                <span ng-if="!$ctrl.currentUser">未</span>
+                                <span ng-if="$ctrl.currentUser">{{$ctrl.currentUser.realName.substring(0,1)}}</span>
+                            </div>
+                            <span class="text-sm font-medium text-slate-700 hidden lg:block">{{$ctrl.currentUser ? $ctrl.currentUser.realName : '未登录'}}</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            
+                            <div class="absolute top-full right-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1 max-h-64 overflow-y-auto">
+                                    <div class="px-4 py-2 text-xs text-slate-400 border-b border-slate-100 bg-slate-50">切换用户 (演示)</div>
+                                    <div ng-repeat="u in $ctrl.userList" 
+                                         ng-click="$ctrl.switchUser(u); $event.stopPropagation();"
+                                         class="px-4 py-2 hover:bg-sky-50 cursor-pointer text-sm flex flex-col"
+                                         ng-class="{'bg-sky-50 text-primary font-medium': $ctrl.currentUser.id === u.id, 'text-slate-700': $ctrl.currentUser.id !== u.id}">
+                                        <span>{{u.realName}} ({{u.username}})</span>
+                                        <span class="text-xs text-slate-500 mt-0.5">{{u.userType}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                     </div>
                 </nav>
             `,
             controller: ['IconService', '$rootScope', function(IconService, $rootScope) {
                 var ctrl = this;
-                ctrl.currentMenu = '鉴定任务管理';
+                ctrl.currentMenu = '工作台';
                 ctrl.currentSubMenu = '';
 
                 ctrl.menuItems = [
@@ -116,6 +139,79 @@
                     { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
                 ];
                 
+                ctrl.filteredMenuItems = [];
+
+                // 模拟用户登录
+                ctrl.userList = [];
+                try {
+                    ctrl.userList = JSON.parse(localStorage.getItem('oaas_user_list')) || [];
+                } catch(e) {}
+                
+                if (ctrl.userList.length === 0) {
+                    ctrl.userList = [
+                        { id: 1, username: 'admin', realName: '系统管理员', userType: '馆内用户' },
+                        { id: 2, username: 'zhangsan', realName: '张三', userType: '馆内用户' },
+                        { id: 3, username: 'lisi', realName: '李四', userType: '形成/移交单位用户' }
+                    ];
+                    localStorage.setItem('oaas_user_list', JSON.stringify(ctrl.userList));
+                }
+
+                try {
+                    ctrl.currentUser = JSON.parse(localStorage.getItem('oaas_current_user'));
+                } catch(e) {}
+                
+                if (!ctrl.currentUser && ctrl.userList.length > 0) {
+                    ctrl.currentUser = ctrl.userList[0];
+                    localStorage.setItem('oaas_current_user', JSON.stringify(ctrl.currentUser));
+                }
+
+                // 权限过滤
+                ctrl.updateMenuByRole = function() {
+                    if (ctrl.currentUser && ctrl.currentUser.userType === '形成/移交单位用户') {
+                        // Base allowed menus
+                        var allowedMenus = ['工作台', '鉴定任务管理'];
+                        
+                        // Load additional menus from role permissions
+                        try {
+                            var permissions = JSON.parse(localStorage.getItem('oaas_role_permissions')) || [];
+                            var userPerm = permissions.find(function(p) { return p.username === ctrl.currentUser.username; });
+                            if (userPerm && userPerm.selectedMenus && userPerm.selectedMenus.length > 0) {
+                                allowedMenus = allowedMenus.concat(userPerm.selectedMenus);
+                            }
+                        } catch(e) {}
+                        
+                        // Filter the main menu based on allowed menus
+                        var newMenuItems = [];
+                        
+                        ctrl.menuItems.forEach(function(item) {
+                            if (allowedMenus.indexOf(item.name) !== -1) {
+                                newMenuItems.push(angular.copy(item));
+                            } else if (item.children) {
+                                var filteredChildren = item.children.filter(function(child) {
+                                    return allowedMenus.indexOf(child) !== -1;
+                                });
+                                if (filteredChildren.length > 0) {
+                                    var newItem = angular.copy(item);
+                                    newItem.children = filteredChildren;
+                                    newMenuItems.push(newItem);
+                                }
+                            }
+                        });
+                        
+                        ctrl.filteredMenuItems = newMenuItems;
+                    } else {
+                        ctrl.filteredMenuItems = ctrl.menuItems;
+                    }
+                };
+
+                ctrl.updateMenuByRole();
+
+                ctrl.switchUser = function(u) {
+                    ctrl.currentUser = u;
+                    localStorage.setItem('oaas_current_user', JSON.stringify(u));
+                    window.location.href = 'index.html'; // 切换用户后回到首页
+                };
+                
                 ctrl.navigate = function(name, parentName) {
                     var map = {
                         '工作台': 'index.html',
@@ -123,10 +219,14 @@
                         '敏感内容管理': 'sensitive-content.html',
                         '通用敏感词库': 'general-sensitive-word.html',
                         '全宗配置': 'fonds-config.html',
+                        '用户管理': 'user-management.html',
+                        '角色权限': 'role-permission.html',
                         '全宗敏感词库': 'fonds-sensitive-word.html',
                         '错检漏检库': 'error-omission-db.html',
                         '鉴定任务管理': 'appraisal-task.html',
-                        '元数据配置': 'metadata-config.html'
+                        '元数据配置': 'metadata-config.html',
+                        '鉴定流程配置': 'appraisal-process-config.html',
+                        '任务审核': 'appraisal-task-audit.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -164,6 +264,7 @@
                     }
                 };
 
+                // 监听面包屑点击回到工作台
                 $rootScope.$on('NAVIGATE', function(e, name, parentName) {
                     ctrl.currentSubMenu = parentName ? name : '';
                     ctrl.currentMenu = parentName || name;
@@ -216,13 +317,16 @@
                     '敏感内容管理': 'sensitive-content.html',
                     '通用敏感词库': 'general-sensitive-word.html',
                     '全宗配置': 'fonds-config.html',
+                    '用户管理': 'user-management.html',
+                    '角色权限': 'role-permission.html',
                     '全宗敏感词库': 'fonds-sensitive-word.html',
                     '错检漏检库': 'error-omission-db.html',
                     '鉴定任务管理': 'appraisal-task.html',
                     '新建任务': 'appraisal-task-create.html',
                     '查看任务': 'appraisal-task-view.html',
                     '修改任务': 'appraisal-task-edit.html',
-                    '元数据配置': 'metadata-config.html'
+                    '元数据配置': 'metadata-config.html',
+                        '鉴定流程配置': 'appraisal-process-config.html'
                 };
                 
                 var nameMap = {};
@@ -231,15 +335,21 @@
                 ctrl.contextMenu = { show: false, x: 0, y: 0, targetTab: null };
                 
                 var currentUrl = 'index.html';
-                var href = window.location.href;
-                var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
-                    return urlMap[b].length - urlMap[a].length;
-                });
-                for (var i = 0; i < sortedKeys.length; i++) {
-                    var key = sortedKeys[i];
-                    if (href.indexOf(urlMap[key]) !== -1) {
-                        currentUrl = urlMap[key];
-                        break;
+                var pathname = window.location.pathname || '';
+                var currentFile = pathname.split('/').pop() || '';
+                if (nameMap[currentFile]) {
+                    currentUrl = currentFile;
+                } else {
+                    var href = window.location.href;
+                    var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
+                        return urlMap[b].length - urlMap[a].length;
+                    });
+                    for (var i = 0; i < sortedKeys.length; i++) {
+                        var key = sortedKeys[i];
+                        if (href.indexOf(urlMap[key]) !== -1) {
+                            currentUrl = urlMap[key];
+                            break;
+                        }
                     }
                 }
                 
@@ -254,6 +364,18 @@
                     }
                 } else {
                     ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                }
+
+                // 兼容历史缓存格式，避免异常数据导致面包屑不显示
+                if (!Array.isArray(ctrl.tabs)) {
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                } else {
+                    ctrl.tabs = ctrl.tabs.filter(function(t) {
+                        return t && typeof t.name === 'string' && typeof t.url === 'string';
+                    });
+                    if (ctrl.tabs.length === 0) {
+                        ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                    }
                 }
                 
                 if (!ctrl.tabs.find(function(t) { return t.name === '工作台'; })) {
@@ -391,23 +513,31 @@
                                 
                                 <div ng-if="$ctrl.showMenu" 
                                      class="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
-                                    <div ng-click="$ctrl.handleAction('view')" class="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer transition-colors flex items-center">
+                                    <div ng-click="$ctrl.handleActionClick('view')" ng-class="$ctrl.getActionClasses('view', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="eye" class="w-4 h-4 mr-2"></i>查看任务
                                     </div>
-                                    <div ng-click="$ctrl.handleAction('edit')" class="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer transition-colors flex items-center">
+                                    <div ng-click="$ctrl.handleActionClick('edit')" ng-class="$ctrl.getActionClasses('edit', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="edit" class="w-4 h-4 mr-2"></i>修改任务
                                     </div>
-                                    <div ng-click="$ctrl.handleAction('start')" class="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer transition-colors flex items-center">
+                                    <div class="border-t border-slate-100 my-1"></div>
+                                    <div ng-click="$ctrl.handleActionClick('start')" ng-class="$ctrl.getActionClasses('start', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="play-circle" class="w-4 h-4 mr-2"></i>开始鉴定
                                     </div>
-                                    <div ng-click="$ctrl.handleAction('audit')" class="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer transition-colors flex items-center">
+                                    <div ng-click="$ctrl.handleActionClick('pause')" ng-class="$ctrl.getActionClasses('pause', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
+                                        <i data-lucide="pause-circle" class="w-4 h-4 mr-2"></i>暂停鉴定
+                                    </div>
+                                    <div ng-click="$ctrl.handleActionClick('cancel')" ng-class="$ctrl.getActionClasses('cancel', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
+                                        <i data-lucide="x-circle" class="w-4 h-4 mr-2"></i>取消鉴定
+                                    </div>
+                                    <div class="border-t border-slate-100 my-1"></div>
+                                    <div ng-click="$ctrl.handleActionClick('audit')" ng-class="$ctrl.getActionClasses('audit', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="clipboard-check" class="w-4 h-4 mr-2"></i>任务审核
                                     </div>
-                                    <div ng-click="$ctrl.handleAction('generate')" class="px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer transition-colors flex items-center">
+                                    <div ng-click="$ctrl.handleActionClick('generate')" ng-class="$ctrl.getActionClasses('generate', false)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="file-output" class="w-4 h-4 mr-2"></i>生成鉴定结果
                                     </div>
                                     <div class="border-t border-slate-100 my-1"></div>
-                                    <div ng-click="$ctrl.handleAction('delete')" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer transition-colors flex items-center">
+                                    <div ng-click="$ctrl.handleActionClick('delete')" ng-class="$ctrl.getActionClasses('delete', true)" class="px-4 py-2 text-sm transition-colors flex items-center">
                                         <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i>删除任务
                                     </div>
                                 </div>
@@ -416,13 +546,13 @@
                     </div>
                     
                     <div class="flex flex-col gap-2 text-sm text-slate-500 leading-relaxed mb-6 flex-1">
-                        <div class="flex items-center">
-                            <i data-lucide="user" class="w-4 h-4 mr-2 text-slate-400"></i>
-                            <span>创建人: <span class="text-slate-600">{{$ctrl.task.creator}}</span></span>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="truncate">创建人: <span class="text-slate-600">{{$ctrl.task.creator}}</span></span>
+                            <span class="shrink-0">创建时间: <span class="text-slate-600">{{$ctrl.getDateOnly($ctrl.task.time)}}</span></span>
                         </div>
-                        <div class="flex items-center">
-                            <i data-lucide="clock" class="w-4 h-4 mr-2 text-slate-400"></i>
-                            <span>时间: <span class="text-slate-600">{{$ctrl.task.time}}</span></span>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="truncate">全宗名称: <span class="text-slate-600">{{$ctrl.task.fondsName}}</span></span>
+                            <span class="shrink-0">鉴定年度: <span class="text-slate-600">{{$ctrl.task.year}}</span></span>
                         </div>
                     </div>
 
@@ -457,6 +587,14 @@
                 
                 ctrl.$onInit = function() {
                     var status = ctrl.task.status || '未开始';
+                    ctrl.actionRules = {
+                        '未开始': ['view', 'edit', 'start', 'delete'],
+                        '鉴定中': ['view', 'pause', 'cancel'],
+                        '未完成': ['view', 'edit', 'start', 'delete'],
+                        '已完成': ['view', 'audit', 'delete'],
+                        '审核中': ['view', 'audit'],
+                        '已审核': ['view', 'audit', 'generate']
+                    };
                     
                     var colorMap = {
                         '未开始': { bg: 'bg-slate-50 text-slate-700 ring-slate-600/20', progress: 'bg-slate-300' },
@@ -476,6 +614,12 @@
                     
                     IconService.refresh();
                 };
+
+                ctrl.getDateOnly = function(value) {
+                    if (value === null || value === undefined) return '';
+                    var str = String(value);
+                    return str.length >= 10 ? str.substring(0, 10) : str;
+                };
                 
                 ctrl.toggleMenu = function(e) {
                     e.stopPropagation();
@@ -483,6 +627,29 @@
                     if (ctrl.showMenu) {
                         $timeout(function() { IconService.refresh(); }, 0, false);
                     }
+                };
+
+                ctrl.isActionEnabled = function(action) {
+                    var status = (ctrl.task && ctrl.task.status) || '未开始';
+                    var allowedActions = ctrl.actionRules[status] || ['view'];
+                    return allowedActions.indexOf(action) !== -1;
+                };
+
+                ctrl.getActionClasses = function(action, isDanger) {
+                    if (!ctrl.isActionEnabled(action)) {
+                        return 'text-slate-300 cursor-not-allowed bg-slate-50/60';
+                    }
+                    if (isDanger) {
+                        return 'text-red-600 hover:bg-red-50 cursor-pointer';
+                    }
+                    return 'text-slate-700 hover:bg-slate-50 hover:text-primary cursor-pointer';
+                };
+
+                ctrl.handleActionClick = function(action) {
+                    if (!ctrl.isActionEnabled(action)) {
+                        return;
+                    }
+                    ctrl.handleAction(action);
                 };
                 
                 ctrl.handleAction = function(action) {
@@ -495,11 +662,14 @@
                         // 模拟任务配置信息并存入 localStorage
                         var editTaskInfo = {
                             name: ctrl.task.title,
-                            fonds: '市政府办公厅', // 模拟数据
-                            year: '2023' // 模拟数据
+                            fonds: ctrl.task.fondsName || '市政府办公厅',
+                            year: ctrl.task.year || '2023'
                         };
                         localStorage.setItem('oaas_current_edit_task', JSON.stringify(editTaskInfo));
                         window.location.href = 'appraisal-task-edit.html';
+                    } else if (action === 'audit') {
+                        localStorage.setItem('oaas_current_task', JSON.stringify(ctrl.task));
+                        window.location.href = 'appraisal-task-audit.html';
                     }
                 };
                 
@@ -581,6 +751,7 @@
                 ctrl.tasks = [];
                 var statuses = ['未开始', '鉴定中', '未完成', '已完成', '审核中', '已审核'];
                 
+                var mockFondsNames = ['市政府办公厅', '市档案馆', '市发改委', '市教育局', '市财政局', '市公安局'];
                 // 模拟生成30条数据
                 for (var i = 1; i <= 30; i++) {
                     var status = statuses[i % 6];
@@ -595,6 +766,8 @@
                         title: '2023年度第' + i + '批档案鉴定任务',
                         creator: '管理员' + (i % 3 + 1),
                         time: '2023-10-' + day + ' 10:00',
+                        fondsName: mockFondsNames[i % mockFondsNames.length],
+                        year: (2021 + (i % 4)).toString(),
                         total: 10 + i * 2,
                         checked: i % 5,
                         opened: i % 3,
@@ -614,6 +787,28 @@
 
                 ctrl.filterTasks = function() {
                     var filtered = ctrl.tasks;
+                    
+                    // Apply role permissions filter
+                    var currentUser = null;
+                    try {
+                        currentUser = JSON.parse(localStorage.getItem('oaas_current_user'));
+                    } catch(e) {}
+                    
+                    if (currentUser && currentUser.userType === '形成/移交单位用户') {
+                        var rolePermissions = [];
+                        try {
+                            rolePermissions = JSON.parse(localStorage.getItem('oaas_role_permissions')) || [];
+                        } catch(e) {}
+                        
+                        var allowedFonds = rolePermissions
+                            .filter(function(rp) { return rp.username === currentUser.username; })
+                            .map(function(rp) { return rp.fondsName; });
+                            
+                        filtered = filtered.filter(function(t) {
+                            return allowedFonds.indexOf(t.fondsName) !== -1;
+                        });
+                    }
+
                     if (ctrl.activeTab !== '全部') {
                         filtered = $filter('filter')(filtered, {status: ctrl.activeTab}, true);
                     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MS-OAAS档案开放鉴定系统 - 敏感内容管理</title>
+    <title>MS-OAAS档案开放鉴定系统 - 鉴定流程配置</title>
     <!-- 引入 Tailwind CSS 进行样式管理 -->
     <script src="./lib/tailwindcss.js"></script>
     <!-- 配置 Tailwind 主题颜色 -->
@@ -34,8 +34,7 @@
     
     <!-- 主体内容区域 -->
     <main class="overflow-y-auto flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
-        <!-- 敏感内容管理视图 -->
-        <sensitive-content-manage class="flex-1 flex flex-col min-w-0 w-full"></sensitive-content-manage>
+        <appraisal-process-manage class="flex-1 flex flex-col min-w-0 w-full"></appraisal-process-manage>
     </main>
 
     <script>
@@ -54,37 +53,20 @@
             };
         });
 
-        // 模拟全局状态服务（用于跨页面传递敏感类型配置，实际应由后端接口提供）
-        app.factory('ConfigService', function() {
-            return {
-                sensitiveTypes: [
-                    { id: 1, name: '个人隐私', controlFlag: '受控' },
-                    { id: 2, name: '国家秘密', controlFlag: '受控' },
-                    { id: 3, name: '商业秘密', controlFlag: '受控' },
-                    { id: 4, name: '普通公开', controlFlag: '开放' }
-                ]
-            };
-        });
-
         app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
-            var ctrl = this;
-            
-            // 初始化导航状态
             $timeout(function() {
-                $rootScope.$broadcast('NAVIGATE', '敏感内容管理', '鉴定规则配置');
+                $rootScope.$broadcast('NAVIGATE', '鉴定流程配置', '系统管理');
             });
         }]);
 
         app.component('navbar', {
             template: `
                 <nav class="bg-surface shadow-sm border-b border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-50">
-                    <!-- 左侧 Logo -->
                     <div class="flex items-center space-x-2 cursor-pointer flex-1 justify-start">
                         <div class="w-8 h-8 bg-primary text-white flex items-center justify-center rounded font-bold text-xl">S</div>
                         <span class="text-xl font-bold text-slate-800 tracking-wide whitespace-nowrap">MS-OAAS档案开放鉴定系统</span>
                     </div>
                     
-                    <!-- 中间功能菜单 -->
                     <div class="hidden md:flex space-x-1 flex-none justify-center">
                         <div ng-repeat="item in $ctrl.filteredMenuItems" 
                              ng-click="!item.children && $ctrl.navigate(item.name)"
@@ -93,7 +75,6 @@
                             <span>{{item.name}}</span>
                             <i ng-if="item.children" data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
                             
-                            <!-- 二级菜单下拉框 -->
                             <div ng-if="item.children" class="absolute top-full left-0 pt-2 w-48 hidden group-hover:block z-50">
                                 <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1">
                                     <div ng-repeat="child in item.children" 
@@ -107,13 +88,11 @@
                         </div>
                     </div>
 
-                    <!-- 右侧系统栏 -->
                     <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end relative">
                         <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         
-                        <!-- 用户切换下拉 -->
                         <div class="relative group cursor-pointer flex items-center space-x-2">
                             <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold overflow-hidden" title="{{$ctrl.currentUser.realName || '未登录'}}">
                                 <span ng-if="!$ctrl.currentUser">未</span>
@@ -154,7 +133,6 @@
                 
                 ctrl.filteredMenuItems = [];
 
-                // 模拟用户登录
                 ctrl.userList = [];
                 try {
                     ctrl.userList = JSON.parse(localStorage.getItem('oaas_user_list')) || [];
@@ -178,13 +156,9 @@
                     localStorage.setItem('oaas_current_user', JSON.stringify(ctrl.currentUser));
                 }
 
-                // 权限过滤
                 ctrl.updateMenuByRole = function() {
                     if (ctrl.currentUser && ctrl.currentUser.userType === '形成/移交单位用户') {
-                        // Base allowed menus
                         var allowedMenus = ['工作台', '鉴定任务管理'];
-                        
-                        // Load additional menus from role permissions
                         try {
                             var permissions = JSON.parse(localStorage.getItem('oaas_role_permissions')) || [];
                             var userPerm = permissions.find(function(p) { return p.username === ctrl.currentUser.username; });
@@ -193,9 +167,7 @@
                             }
                         } catch(e) {}
                         
-                        // Filter the main menu based on allowed menus
                         var newMenuItems = [];
-                        
                         ctrl.menuItems.forEach(function(item) {
                             if (allowedMenus.indexOf(item.name) !== -1) {
                                 newMenuItems.push(angular.copy(item));
@@ -210,7 +182,6 @@
                                 }
                             }
                         });
-                        
                         ctrl.filteredMenuItems = newMenuItems;
                     } else {
                         ctrl.filteredMenuItems = ctrl.menuItems;
@@ -222,7 +193,7 @@
                 ctrl.switchUser = function(u) {
                     ctrl.currentUser = u;
                     localStorage.setItem('oaas_current_user', JSON.stringify(u));
-                    window.location.href = 'index.html'; // 切换用户后回到首页
+                    window.location.href = 'index.html';
                 };
                 
                 ctrl.navigate = function(name, parentName) {
@@ -277,7 +248,6 @@
                     }
                 };
 
-                // 监听面包屑点击回到工作台
                 $rootScope.$on('NAVIGATE', function(e, name, parentName) {
                     ctrl.currentSubMenu = parentName ? name : '';
                     ctrl.currentMenu = parentName || name;
@@ -312,7 +282,6 @@
                         </div>
                     </div>
                     
-                    <!-- Context Menu -->
                     <div ng-if="$ctrl.contextMenu.show" 
                          class="fixed z-[100] w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1"
                          ng-style="{'left': $ctrl.contextMenu.x + 'px', 'top': $ctrl.contextMenu.y + 'px'}">
@@ -339,7 +308,7 @@
                     '查看任务': 'appraisal-task-view.html',
                     '修改任务': 'appraisal-task-edit.html',
                     '元数据配置': 'metadata-config.html',
-                        '鉴定流程配置': 'appraisal-process-config.html'
+                    '鉴定流程配置': 'appraisal-process-config.html'
                 };
                 
                 var nameMap = {};
@@ -379,7 +348,6 @@
                     ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
                 }
 
-                // 兼容历史缓存格式，避免异常数据导致面包屑不显示
                 if (!Array.isArray(ctrl.tabs)) {
                     ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
                 } else {
@@ -490,7 +458,6 @@
             }]
         });
 
-        // Ensure ng-right-click is registered
         if (!app._invokeQueue.some(function(item) { return item[1] === 'directive' && item[2][0] === 'ngRightClick'; })) {
             app.directive('ngRightClick', ['$parse', function($parse) {
                 return function(scope, element, attrs) {
@@ -505,274 +472,237 @@
             }]);
         }
 
-        app.component('sensitiveContentManage', {
+        app.component('appraisalProcessManage', {
             template: `
-                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full">
-                    <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                        <h2 class="text-lg font-bold text-slate-800">敏感内容管理</h2>
-                        <div class="flex items-center space-x-3">
-                            <button ng-click="$ctrl.batchImport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="upload" class="w-4 h-4 mr-1"></i> 批量导入
-                            </button>
-                            <button ng-click="$ctrl.batchExport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="download" class="w-4 h-4 mr-1"></i> 批量导出
-                            </button>
-                            <button ng-click="$ctrl.openForm()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> 新增敏感内容
-                            </button>
-                            <button ng-click="$ctrl.batchDelete()" ng-disabled="!$ctrl.hasSelected()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 批量删除
-                            </button>
-                        </div>
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 flex flex-col h-full overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i data-lucide="git-merge" class="w-5 h-5 mr-2 text-primary"></i> 鉴定流程配置
+                        </h2>
+                        <button ng-click="$ctrl.saveProcess()" class="bg-primary hover:bg-sky-800 text-white px-5 py-2 rounded-md text-sm transition-colors flex items-center font-medium shadow-sm">
+                            <i data-lucide="save" class="w-4 h-4 mr-1.5"></i> 保存配置
+                        </button>
                     </div>
                     
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
-                                    <th class="px-4 py-3 font-medium w-12">
-                                        <input type="checkbox" ng-model="$ctrl.selectAll" ng-change="$ctrl.toggleAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
-                                    </th>
-                                    <th class="px-4 py-3 font-medium w-16">序号</th>
-                                    <th class="px-4 py-3 font-medium">敏感内容标题</th>
-                                    <th class="px-4 py-3 font-medium">敏感内容</th>
-                                    <th class="px-4 py-3 font-medium">敏感类型</th>
-                                    <th class="px-4 py-3 font-medium">控制标识</th>
-                                    <th class="px-4 py-3 font-medium">创建时间</th>
-                                    <th class="px-4 py-3 font-medium">是否启用</th>
-                                    <th class="px-4 py-3 font-medium text-right">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr ng-repeat="item in $ctrl.list" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
-                                    <td class="px-4 py-3">
-                                        <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
-                                    <td class="px-4 py-3 text-slate-800">{{item.title}}</td>
-                                    <td class="px-4 py-3 text-slate-800">{{item.content}}</td>
-                                    <td class="px-4 py-3 text-slate-800">{{item.type.name}}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 rounded text-xs" ng-class="item.type.controlFlag === '受控' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'">
-                                            {{item.type.controlFlag}}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-500">{{item.createdAt}}</td>
-                                    <td class="px-4 py-3">
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" ng-model="item.enabled" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                                        </label>
-                                    </td>
-                                    <td class="px-4 py-3 text-right space-x-3">
-                                        <button ng-click="$ctrl.editItem(item)" class="text-blue-600 hover:text-blue-800 font-medium">编辑</button>
-                                        <button ng-click="$ctrl.deleteItem(item)" class="text-red-600 hover:text-red-800 font-medium">删除</button>
-                                    </td>
-                                </tr>
-                                <tr ng-if="$ctrl.list.length === 0">
-                                    <td colspan="9" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+                        
+                        <!-- 流程图区域 -->
+                        <div class="w-full max-w-4xl mb-10">
+                            <h3 class="text-md font-bold text-slate-700 mb-6 text-center">审核流程图</h3>
+                            
+                            <div class="flex items-center justify-center">
+                                <div ng-repeat="step in $ctrl.steps" class="flex items-center">
+                                    <!-- 节点 -->
+                                    <div class="relative group cursor-pointer transition-all duration-300" 
+                                         ng-click="$ctrl.selectStep($index)"
+                                         ng-class="{'scale-105': $ctrl.currentStepIndex === $index}">
+                                        <div class="w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center bg-white shadow-md transition-colors"
+                                             ng-class="$ctrl.currentStepIndex === $index ? 'border-primary text-primary ring-4 ring-sky-100' : 'border-slate-300 text-slate-500 hover:border-slate-400'">
+                                            <i data-lucide="{{step.icon}}" class="w-8 h-8 mb-2"></i>
+                                            <span class="font-bold text-lg">{{step.name}}</span>
+                                        </div>
+                                        
+                                        <!-- 选中指示器 -->
+                                        <div ng-if="$ctrl.currentStepIndex === $index" class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rotate-45"></div>
+                                    </div>
+                                    
+                                    <!-- 连接线 -->
+                                    <div ng-if="!$last" class="w-16 h-1 bg-slate-300 mx-4 relative">
+                                        <div class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-0 h-0 border-y-4 border-y-transparent border-l-4 border-l-slate-300"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <!-- 弹窗表单 -->
-                    <div ng-if="$ctrl.showForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
-                        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '编辑' : '新增' }}敏感内容</h3>
-                                <button ng-click="$ctrl.closeForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <div class="p-6 space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感内容标题 <span class="text-red-500">*</span></label>
-                                    <input type="text" ng-model="$ctrl.formData.title" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入敏感内容标题">
+                        <!-- 配置面板 -->
+                        <div class="w-full max-w-4xl bg-slate-50 rounded-lg border border-slate-200 p-6 shadow-sm relative">
+                            <!-- 选中的步骤标题 -->
+                            <div class="flex items-center mb-6 pb-4 border-b border-slate-200">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-3">
+                                    <i data-lucide="{{$ctrl.currentStep.icon}}" class="w-5 h-5"></i>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感内容 <span class="text-red-500">*</span></label>
-                                    <textarea ng-model="$ctrl.formData.content" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="请输入敏感内容"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感类型 <span class="text-red-500">*</span></label>
-                                    <select ng-options="type.name for type in $ctrl.sensitiveTypes track by type.id" ng-model="$ctrl.formData.type" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
-                                        <option value="" disabled>请选择敏感类型</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">控制标识</label>
-                                    <input type="text" ng-value="$ctrl.formData.type.controlFlag || '自动获取'" disabled class="w-full px-3 py-2 border border-slate-200 bg-slate-50 text-slate-500 rounded-md cursor-not-allowed">
-                                    <p class="text-xs text-slate-400 mt-1">根据选择的敏感类型自动填充</p>
-                                </div>
-                                <div class="flex items-center pt-2">
-                                    <label class="text-sm font-medium text-slate-700 mr-3">是否启用</label>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" ng-model="$ctrl.formData.enabled" class="sr-only peer">
-                                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                                    </label>
+                                    <h3 class="text-lg font-bold text-slate-800">{{$ctrl.currentStep.name}} - 审核人配置</h3>
+                                    <p class="text-xs text-slate-500 mt-1">配置此环节允许审核的人员</p>
                                 </div>
                             </div>
-                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
-                                <button ng-click="$ctrl.closeForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
-                                <button ng-click="$ctrl.saveForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
+                            
+                            <div class="flex flex-col md:flex-row gap-6">
+                                <!-- 左侧：添加审核人 -->
+                                <div class="w-full md:w-1/3 border-r border-slate-200 pr-0 md:pr-6">
+                                    <h4 class="font-medium text-slate-700 mb-4 flex items-center text-sm">
+                                        <i data-lucide="user-plus" class="w-4 h-4 mr-1.5 text-slate-500"></i> 添加审核人
+                                    </h4>
+                                    
+                                    <div class="space-y-4">
+                                        <!-- 馆内用户选择 -->
+                                        <div class="bg-white p-4 rounded border border-slate-200 shadow-sm">
+                                            <label class="block text-xs font-semibold text-slate-600 mb-2">选择馆内用户</label>
+                                            <select ng-model="$ctrl.selectedInHouseUser" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary mb-3">
+                                                <option value="">-- 请选择 --</option>
+                                                <option ng-repeat="u in $ctrl.inHouseUsers" value="{{u.username}}">{{u.realName}} ({{u.username}})</option>
+                                            </select>
+                                            <button ng-click="$ctrl.addInHouseUser()" ng-disabled="!$ctrl.selectedInHouseUser" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200">
+                                                添加指定人员
+                                            </button>
+                                        </div>
+
+                                        <!-- 形成/移交单位用户添加 -->
+                                        <div class="bg-white p-4 rounded border border-slate-200 shadow-sm">
+                                            <label class="block text-xs font-semibold text-slate-600 mb-2">形成/移交单位用户</label>
+                                            <p class="text-xs text-slate-500 mb-3">允许该任务对应全宗下的形成/移交单位用户参与审核。</p>
+                                            <button ng-click="$ctrl.addTransferUnitType()" ng-disabled="$ctrl.hasTransferUnitType()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200 flex items-center justify-center">
+                                                <i data-lucide="plus" class="w-3.5 h-3.5 mr-1"></i> 添加此用户类型
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 右侧：已配置审核人列表 -->
+                                <div class="w-full md:w-2/3">
+                                    <h4 class="font-medium text-slate-700 mb-4 flex items-center text-sm">
+                                        <i data-lucide="users" class="w-4 h-4 mr-1.5 text-slate-500"></i> 已配置审核人 ({{$ctrl.currentStep.reviewers.length}})
+                                    </h4>
+                                    
+                                    <div ng-if="$ctrl.currentStep.reviewers.length === 0" class="bg-white border border-dashed border-slate-300 rounded-lg h-40 flex flex-col items-center justify-center text-slate-400">
+                                        <i data-lucide="inbox" class="w-8 h-8 mb-2 opacity-50"></i>
+                                        <span class="text-sm">暂无审核人，请在左侧添加</span>
+                                    </div>
+                                    
+                                    <div ng-if="$ctrl.currentStep.reviewers.length > 0" class="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                                        <div ng-repeat="reviewer in $ctrl.currentStep.reviewers" class="bg-white border border-slate-200 rounded-md p-3 flex items-center justify-between shadow-sm hover:border-primary/30 transition-colors group">
+                                            <div class="flex items-center">
+                                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 text-slate-500">
+                                                    <i data-lucide="{{reviewer.type === '馆内用户' ? 'user' : 'building'}}" class="w-4 h-4"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium text-slate-800 text-sm flex items-center">
+                                                        {{reviewer.name}}
+                                                        <span ng-if="reviewer.type === '形成/移交单位用户'" class="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-normal">动态用户</span>
+                                                    </div>
+                                                    <div class="text-xs text-slate-500 mt-0.5">{{reviewer.type}}</div>
+                                                </div>
+                                            </div>
+                                            <button ng-click="$ctrl.removeReviewer($index)" class="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100" title="移除">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <style>
+                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+                </style>
             `,
-            controller: ['IconService', 'ConfigService', '$timeout', function(IconService, ConfigService, $timeout) {
+            controller: ['IconService', '$timeout', function(IconService, $timeout) {
                 var ctrl = this;
                 
-                // 获取敏感类型选项数据
-                ctrl.sensitiveTypes = ConfigService.sensitiveTypes;
+                // 加载所有用户
+                ctrl.allUsers = [];
+                try {
+                    ctrl.allUsers = JSON.parse(localStorage.getItem('oaas_user_list')) || [];
+                } catch(e) {}
                 
-                var storedContents = localStorage.getItem('oaas_sensitive_contents');
-                if (storedContents) {
+                // 筛选出馆内用户供选择
+                ctrl.inHouseUsers = ctrl.allUsers.filter(function(u) { return u.userType === '馆内用户'; });
+                ctrl.selectedInHouseUser = '';
+
+                // 初始化流程步骤
+                var defaultSteps = [
+                    { id: 'step1', name: '初审', icon: 'file-search', reviewers: [] },
+                    { id: 'step2', name: '复审', icon: 'file-check-2', reviewers: [] },
+                    { id: 'step3', name: '终审', icon: 'check-square', reviewers: [] }
+                ];
+                
+                // 从本地存储加载配置
+                var savedProcess = localStorage.getItem('oaas_appraisal_process');
+                if (savedProcess) {
                     try {
-                        ctrl.list = JSON.parse(storedContents);
+                        ctrl.steps = JSON.parse(savedProcess);
+                        // Ensure all steps have reviewers array
+                        ctrl.steps.forEach(function(s) {
+                            if (!s.reviewers) s.reviewers = [];
+                        });
                     } catch(e) {
-                        ctrl.list = [
-                            { id: 1, title: '居民身份证号码', content: '身份证号', type: ctrl.sensitiveTypes[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
-                            { id: 2, title: '市委常委会议纪要', content: '涉密会议纪要', type: ctrl.sensitiveTypes[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false },
-                            { id: 3, title: 'XX系统核心加密算法', content: '核心算法代码', type: ctrl.sensitiveTypes[2], createdAt: '2023-10-03 09:30:00', enabled: false, selected: false },
-                            { id: 4, title: '市政府信息公开年报', content: '政府公开年度报告', type: ctrl.sensitiveTypes[3], createdAt: '2023-10-04 16:45:00', enabled: true, selected: false }
-                        ];
+                        ctrl.steps = angular.copy(defaultSteps);
                     }
                 } else {
-                    ctrl.list = [
-                        { id: 1, title: '居民身份证号码', content: '身份证号', type: ctrl.sensitiveTypes[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
-                        { id: 2, title: '市委常委会议纪要', content: '涉密会议纪要', type: ctrl.sensitiveTypes[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false },
-                        { id: 3, title: 'XX系统核心加密算法', content: '核心算法代码', type: ctrl.sensitiveTypes[2], createdAt: '2023-10-03 09:30:00', enabled: false, selected: false },
-                        { id: 4, title: '市政府信息公开年报', content: '政府公开年度报告', type: ctrl.sensitiveTypes[3], createdAt: '2023-10-04 16:45:00', enabled: true, selected: false }
-                    ];
-                    localStorage.setItem('oaas_sensitive_contents', JSON.stringify(ctrl.list));
+                    ctrl.steps = angular.copy(defaultSteps);
                 }
 
-                ctrl.saveData = function() {
-                    localStorage.setItem('oaas_sensitive_contents', JSON.stringify(ctrl.list));
+                ctrl.currentStepIndex = 0;
+                ctrl.currentStep = ctrl.steps[ctrl.currentStepIndex];
+
+                ctrl.selectStep = function(index) {
+                    ctrl.currentStepIndex = index;
+                    ctrl.currentStep = ctrl.steps[index];
+                    ctrl.selectedInHouseUser = ''; // 重置选择
+                    $timeout(function() { IconService.refresh(); }, 0);
                 };
 
-                ctrl.showForm = false;
-                ctrl.isEdit = false;
-                ctrl.formData = {};
-                ctrl.selectAll = false;
+                // 添加馆内用户
+                ctrl.addInHouseUser = function() {
+                    if (!ctrl.selectedInHouseUser) return;
+                    
+                    // 检查是否已添加
+                    var exists = ctrl.currentStep.reviewers.some(function(r) {
+                        return r.username === ctrl.selectedInHouseUser && r.type === '馆内用户';
+                    });
+                    
+                    if (exists) {
+                        alert('该用户已在审核人列表中');
+                        return;
+                    }
+                    
+                    var user = ctrl.inHouseUsers.find(function(u) { return u.username === ctrl.selectedInHouseUser; });
+                    if (user) {
+                        ctrl.currentStep.reviewers.push({
+                            username: user.username,
+                            name: user.realName + ' (' + user.username + ')',
+                            type: '馆内用户'
+                        });
+                        ctrl.selectedInHouseUser = '';
+                        $timeout(function() { IconService.refresh(); }, 0);
+                    }
+                };
+
+                // 检查是否已添加形成/移交单位用户类型
+                ctrl.hasTransferUnitType = function() {
+                    return ctrl.currentStep.reviewers.some(function(r) {
+                        return r.type === '形成/移交单位用户';
+                    });
+                };
+
+                // 添加形成/移交单位用户类型
+                ctrl.addTransferUnitType = function() {
+                    if (ctrl.hasTransferUnitType()) return;
+                    
+                    ctrl.currentStep.reviewers.push({
+                        username: '*', // 代表类型匹配
+                        name: '形成/移交单位用户',
+                        type: '形成/移交单位用户'
+                    });
+                    $timeout(function() { IconService.refresh(); }, 0);
+                };
+
+                // 移除审核人
+                ctrl.removeReviewer = function(index) {
+                    ctrl.currentStep.reviewers.splice(index, 1);
+                };
+
+                // 保存配置
+                ctrl.saveProcess = function() {
+                    localStorage.setItem('oaas_appraisal_process', JSON.stringify(ctrl.steps));
+                    alert('鉴定流程配置保存成功！');
+                };
 
                 ctrl.$onInit = function() {
-                    IconService.refresh();
-                };
-
-                // 批量操作相关方法
-                ctrl.toggleAll = function() {
-                    ctrl.list.forEach(function(item) {
-                        item.selected = ctrl.selectAll;
-                    });
-                };
-
-                ctrl.updateSelectAll = function() {
-                    if (ctrl.list.length === 0) {
-                        ctrl.selectAll = false;
-                        return;
-                    }
-                    ctrl.selectAll = ctrl.list.every(function(item) {
-                        return item.selected;
-                    });
-                };
-
-                ctrl.hasSelected = function() {
-                    return ctrl.list.some(function(item) {
-                        return item.selected;
-                    });
-                };
-
-                ctrl.batchImport = function() {
-                    alert('请选择要导入的 Excel/CSV 文件');
-                };
-
-                ctrl.batchExport = function() {
-                    if (!ctrl.hasSelected()) {
-                        alert('将导出所有敏感内容数据');
-                    } else {
-                        var selectedCount = ctrl.list.filter(function(item) { return item.selected; }).length;
-                        alert('将导出选中的 ' + selectedCount + ' 项敏感内容数据');
-                    }
-                };
-
-                ctrl.batchDelete = function() {
-                    var selectedItems = ctrl.list.filter(function(item) { return item.selected; });
-                    if (selectedItems.length === 0) return;
-                    
-                    if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项敏感内容吗？')) {
-                        ctrl.list = ctrl.list.filter(function(item) { return !item.selected; });
-                        ctrl.selectAll = false;
-                        ctrl.saveData();
-                        IconService.refresh();
-                    }
-                };
-
-                ctrl.openForm = function() {
-                    ctrl.isEdit = false;
-                    ctrl.formData = { enabled: true };
-                    ctrl.showForm = true;
-                    IconService.refresh();
-                };
-
-                ctrl.editItem = function(item) {
-                    ctrl.isEdit = true;
-                    ctrl.formData = angular.copy(item);
-                    // 确保选中正确的引用
-                    ctrl.formData.type = ctrl.sensitiveTypes.find(function(t) { return t.id === item.type.id; });
-                    ctrl.showForm = true;
-                    IconService.refresh();
-                };
-
-                ctrl.deleteItem = function(item) {
-                    if (confirm('确定要删除敏感内容 "' + item.content + '" 吗？')) {
-                        var index = ctrl.list.findIndex(function(i) { return i.id === item.id; });
-                        if (index > -1) {
-                            ctrl.list.splice(index, 1);
-                            ctrl.updateSelectAll();
-                            ctrl.saveData();
-                        }
-                    }
-                };
-
-                ctrl.closeForm = function() {
-                    ctrl.showForm = false;
-                };
-
-                ctrl.saveForm = function() {
-                    if (!ctrl.formData.title) {
-                        alert('请输入敏感内容标题');
-                        return;
-                    }
-                    if (!ctrl.formData.content) {
-                        alert('请输入敏感内容');
-                        return;
-                    }
-                    if (!ctrl.formData.type) {
-                        alert('请选择敏感类型');
-                        return;
-                    }
-                    
-                    if (ctrl.isEdit) {
-                        var index = ctrl.list.findIndex(function(i) { return i.id === ctrl.formData.id; });
-                        if (index > -1) {
-                            var updatedItem = angular.copy(ctrl.formData);
-                            updatedItem.selected = ctrl.list[index].selected; // 保持选中状态
-                            ctrl.list[index] = updatedItem;
-                        }
-                    } else {
-                        ctrl.formData.id = Date.now();
-                        ctrl.formData.selected = false;
-                        
-                        var d = new Date();
-                        var pad = function(n) { return n < 10 ? '0' + n : n; };
-                        ctrl.formData.createdAt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-                        
-                        ctrl.list.push(angular.copy(ctrl.formData));
-                    }
-                    ctrl.saveData();
-                    ctrl.showForm = false;
-                    IconService.refresh();
+                    $timeout(function() { IconService.refresh(); }, 0);
                 };
             }]
         });

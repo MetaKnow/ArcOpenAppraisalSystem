@@ -45,6 +45,7 @@ const newBreadcrumb = `        app.component('breadcrumb', {
                     '敏感内容管理': 'sensitive-content.html',
                     '通用敏感词库': 'general-sensitive-word.html',
                     '全宗配置': 'fonds-config.html',
+                    '用户管理': 'user-management.html',
                     '全宗敏感词库': 'fonds-sensitive-word.html',
                     '错检漏检库': 'error-omission-db.html',
                     '鉴定任务管理': 'appraisal-task.html',
@@ -60,15 +61,21 @@ const newBreadcrumb = `        app.component('breadcrumb', {
                 ctrl.contextMenu = { show: false, x: 0, y: 0, targetTab: null };
                 
                 var currentUrl = 'index.html';
-                var href = window.location.href;
-                var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
-                    return urlMap[b].length - urlMap[a].length;
-                });
-                for (var i = 0; i < sortedKeys.length; i++) {
-                    var key = sortedKeys[i];
-                    if (href.indexOf(urlMap[key]) !== -1) {
-                        currentUrl = urlMap[key];
-                        break;
+                var pathname = window.location.pathname || '';
+                var currentFile = pathname.split('/').pop() || '';
+                if (nameMap[currentFile]) {
+                    currentUrl = currentFile;
+                } else {
+                    var href = window.location.href;
+                    var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
+                        return urlMap[b].length - urlMap[a].length;
+                    });
+                    for (var i = 0; i < sortedKeys.length; i++) {
+                        var key = sortedKeys[i];
+                        if (href.indexOf(urlMap[key]) !== -1) {
+                            currentUrl = urlMap[key];
+                            break;
+                        }
                     }
                 }
                 
@@ -83,6 +90,18 @@ const newBreadcrumb = `        app.component('breadcrumb', {
                     }
                 } else {
                     ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                }
+
+                // 兼容历史缓存格式，避免异常数据导致面包屑不显示
+                if (!Array.isArray(ctrl.tabs)) {
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                } else {
+                    ctrl.tabs = ctrl.tabs.filter(function(t) {
+                        return t && typeof t.name === 'string' && typeof t.url === 'string';
+                    });
+                    if (ctrl.tabs.length === 0) {
+                        ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                    }
                 }
                 
                 if (!ctrl.tabs.find(function(t) { return t.name === '工作台'; })) {

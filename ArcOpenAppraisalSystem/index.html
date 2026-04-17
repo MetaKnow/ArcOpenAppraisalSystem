@@ -50,37 +50,8 @@
             <!-- 全宗数据统计柱状图 -->
             <fonds-chart></fonds-chart>
 
-            <!-- 任务列表区域 -->
-            <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5">
-                <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                    <h2 class="text-lg font-bold text-slate-800">开放鉴定任务</h2>
-                </div>
-                
-                <!-- 过滤和搜索栏 -->
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex space-x-3">
-                        <div ng-repeat="tab in ctrl.taskStatusTabs" 
-                             ng-click="ctrl.setActiveTab(tab)"
-                             ng-class="{'text-primary bg-sky-50': ctrl.activeTab === tab, 'text-slate-500 hover:text-slate-800 hover:bg-slate-50': ctrl.activeTab !== tab}"
-                             class="cursor-pointer px-3 py-2 text-sm font-medium rounded-md transition-colors relative">
-                            {{tab}}
-                            <div ng-if="ctrl.activeTab === tab" class="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></div>
-                        </div>
-                    </div>
-                    <div class="flex w-64">
-                        <input type="text" placeholder="请输入任务名" ng-model="ctrl.searchText" class="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-l-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-sky-100 transition-all" />
-                        <button class="bg-primary hover:bg-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200 text-white px-4 py-1.5 rounded-r-md text-sm transition-colors flex items-center whitespace-nowrap shrink-0">
-                            <i data-lucide="search" class="w-4 h-4 mr-1"></i>
-                            查询
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 任务卡片网格 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <task-card ng-repeat="task in ctrl.tasks | filter:ctrl.searchText" task="task"></task-card>
-                </div>
-            </div>
+            <!-- 年度数据统计柱状图 -->
+            <annual-chart></annual-chart>
         </div>
 
     </main>
@@ -137,7 +108,7 @@
                     
                     <!-- 中间功能菜单 -->
                     <div class="hidden md:flex space-x-1 flex-none justify-center">
-                        <div ng-repeat="item in $ctrl.menuItems" 
+                        <div ng-repeat="item in $ctrl.filteredMenuItems" 
                              ng-click="!item.children && $ctrl.navigate(item.name)"
                              ng-class="{ 'text-primary bg-sky-50': $ctrl.currentMenu === item.name, 'text-slate-600 hover:bg-slate-50 hover:text-slate-900': $ctrl.currentMenu !== item.name }"
                              class="relative group px-4 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors duration-200 flex items-center space-x-1">
@@ -159,11 +130,34 @@
                     </div>
 
                     <!-- 右侧系统栏 -->
-                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end">
+                    <div class="flex items-center space-x-5 text-slate-500 flex-1 justify-end relative">
                         <i data-lucide="search" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="lock" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                         <i data-lucide="sun" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
-                        <div class="w-8 h-8 rounded-full bg-slate-200 cursor-pointer border border-slate-300"></div>
+                        
+                        <!-- 用户切换下拉 -->
+                        <div class="relative group cursor-pointer flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 text-xs font-bold overflow-hidden" title="{{$ctrl.currentUser.realName || '未登录'}}">
+                                <span ng-if="!$ctrl.currentUser">未</span>
+                                <span ng-if="$ctrl.currentUser">{{$ctrl.currentUser.realName.substring(0,1)}}</span>
+                            </div>
+                            <span class="text-sm font-medium text-slate-700 hidden lg:block">{{$ctrl.currentUser ? $ctrl.currentUser.realName : '未登录'}}</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i>
+                            
+                            <div class="absolute top-full right-0 pt-2 w-48 hidden group-hover:block z-50">
+                                <div class="bg-white border border-slate-200 shadow-lg rounded-md py-1 max-h-64 overflow-y-auto">
+                                    <div class="px-4 py-2 text-xs text-slate-400 border-b border-slate-100 bg-slate-50">切换用户 (演示)</div>
+                                    <div ng-repeat="u in $ctrl.userList" 
+                                         ng-click="$ctrl.switchUser(u); $event.stopPropagation();"
+                                         class="px-4 py-2 hover:bg-sky-50 cursor-pointer text-sm flex flex-col"
+                                         ng-class="{'bg-sky-50 text-primary font-medium': $ctrl.currentUser.id === u.id, 'text-slate-700': $ctrl.currentUser.id !== u.id}">
+                                        <span>{{u.realName}} ({{u.username}})</span>
+                                        <span class="text-xs text-slate-500 mt-0.5">{{u.userType}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <i data-lucide="settings" class="w-5 h-5 cursor-pointer hover:text-primary transition-colors"></i>
                     </div>
                 </nav>
@@ -180,17 +174,94 @@
                     { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
                 ];
                 
-                                ctrl.navigate = function(name, parentName) {
+                ctrl.filteredMenuItems = [];
+
+                // 模拟用户登录
+                ctrl.userList = [];
+                try {
+                    ctrl.userList = JSON.parse(localStorage.getItem('oaas_user_list')) || [];
+                } catch(e) {}
+                
+                if (ctrl.userList.length === 0) {
+                    ctrl.userList = [
+                        { id: 1, username: 'admin', realName: '系统管理员', userType: '馆内用户' },
+                        { id: 2, username: 'zhangsan', realName: '张三', userType: '馆内用户' },
+                        { id: 3, username: 'lisi', realName: '李四', userType: '形成/移交单位用户' }
+                    ];
+                    localStorage.setItem('oaas_user_list', JSON.stringify(ctrl.userList));
+                }
+
+                try {
+                    ctrl.currentUser = JSON.parse(localStorage.getItem('oaas_current_user'));
+                } catch(e) {}
+                
+                if (!ctrl.currentUser && ctrl.userList.length > 0) {
+                    ctrl.currentUser = ctrl.userList[0];
+                    localStorage.setItem('oaas_current_user', JSON.stringify(ctrl.currentUser));
+                }
+
+                // 权限过滤
+                ctrl.updateMenuByRole = function() {
+                    if (ctrl.currentUser && ctrl.currentUser.userType === '形成/移交单位用户') {
+                        // Base allowed menus
+                        var allowedMenus = ['工作台', '鉴定任务管理'];
+                        
+                        // Load additional menus from role permissions
+                        try {
+                            var permissions = JSON.parse(localStorage.getItem('oaas_role_permissions')) || [];
+                            var userPerm = permissions.find(function(p) { return p.username === ctrl.currentUser.username; });
+                            if (userPerm && userPerm.selectedMenus && userPerm.selectedMenus.length > 0) {
+                                allowedMenus = allowedMenus.concat(userPerm.selectedMenus);
+                            }
+                        } catch(e) {}
+                        
+                        // Filter the main menu based on allowed menus
+                        var newMenuItems = [];
+                        
+                        ctrl.menuItems.forEach(function(item) {
+                            if (allowedMenus.indexOf(item.name) !== -1) {
+                                newMenuItems.push(angular.copy(item));
+                            } else if (item.children) {
+                                var filteredChildren = item.children.filter(function(child) {
+                                    return allowedMenus.indexOf(child) !== -1;
+                                });
+                                if (filteredChildren.length > 0) {
+                                    var newItem = angular.copy(item);
+                                    newItem.children = filteredChildren;
+                                    newMenuItems.push(newItem);
+                                }
+                            }
+                        });
+                        
+                        ctrl.filteredMenuItems = newMenuItems;
+                    } else {
+                        ctrl.filteredMenuItems = ctrl.menuItems;
+                    }
+                };
+
+                ctrl.updateMenuByRole();
+
+                ctrl.switchUser = function(u) {
+                    ctrl.currentUser = u;
+                    localStorage.setItem('oaas_current_user', JSON.stringify(u));
+                    window.location.href = 'index.html'; // 切换用户后回到首页
+                };
+                
+                ctrl.navigate = function(name, parentName) {
                     var map = {
                         '工作台': 'index.html',
                         '敏感类型管理': 'sensitive-type.html',
                         '敏感内容管理': 'sensitive-content.html',
                         '通用敏感词库': 'general-sensitive-word.html',
                         '全宗配置': 'fonds-config.html',
+                        '用户管理': 'user-management.html',
+                        '角色权限': 'role-permission.html',
                         '全宗敏感词库': 'fonds-sensitive-word.html',
                         '错检漏检库': 'error-omission-db.html',
                         '鉴定任务管理': 'appraisal-task.html',
-                        '元数据配置': 'metadata-config.html'
+                        '元数据配置': 'metadata-config.html',
+                        '鉴定流程配置': 'appraisal-process-config.html',
+                        '任务审核': 'appraisal-task-audit.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -281,13 +352,16 @@
                     '敏感内容管理': 'sensitive-content.html',
                     '通用敏感词库': 'general-sensitive-word.html',
                     '全宗配置': 'fonds-config.html',
+                    '用户管理': 'user-management.html',
+                    '角色权限': 'role-permission.html',
                     '全宗敏感词库': 'fonds-sensitive-word.html',
                     '错检漏检库': 'error-omission-db.html',
                     '鉴定任务管理': 'appraisal-task.html',
                     '新建任务': 'appraisal-task-create.html',
                     '查看任务': 'appraisal-task-view.html',
                     '修改任务': 'appraisal-task-edit.html',
-                    '元数据配置': 'metadata-config.html'
+                    '元数据配置': 'metadata-config.html',
+                        '鉴定流程配置': 'appraisal-process-config.html'
                 };
                 
                 var nameMap = {};
@@ -296,15 +370,21 @@
                 ctrl.contextMenu = { show: false, x: 0, y: 0, targetTab: null };
                 
                 var currentUrl = 'index.html';
-                var href = window.location.href;
-                var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
-                    return urlMap[b].length - urlMap[a].length;
-                });
-                for (var i = 0; i < sortedKeys.length; i++) {
-                    var key = sortedKeys[i];
-                    if (href.indexOf(urlMap[key]) !== -1) {
-                        currentUrl = urlMap[key];
-                        break;
+                var pathname = window.location.pathname || '';
+                var currentFile = pathname.split('/').pop() || '';
+                if (nameMap[currentFile]) {
+                    currentUrl = currentFile;
+                } else {
+                    var href = window.location.href;
+                    var sortedKeys = Object.keys(urlMap).sort(function(a, b) {
+                        return urlMap[b].length - urlMap[a].length;
+                    });
+                    for (var i = 0; i < sortedKeys.length; i++) {
+                        var key = sortedKeys[i];
+                        if (href.indexOf(urlMap[key]) !== -1) {
+                            currentUrl = urlMap[key];
+                            break;
+                        }
                     }
                 }
                 
@@ -319,6 +399,18 @@
                     }
                 } else {
                     ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                }
+
+                // 兼容历史缓存格式，避免异常数据导致面包屑不显示
+                if (!Array.isArray(ctrl.tabs)) {
+                    ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                } else {
+                    ctrl.tabs = ctrl.tabs.filter(function(t) {
+                        return t && typeof t.name === 'string' && typeof t.url === 'string';
+                    });
+                    if (ctrl.tabs.length === 0) {
+                        ctrl.tabs = [{ name: '工作台', url: 'index.html', active: false }];
+                    }
                 }
                 
                 if (!ctrl.tabs.find(function(t) { return t.name === '工作台'; })) {
@@ -735,6 +827,170 @@
                                     barWidth: '34%',
                                     barMaxWidth: 28,
                                     itemStyle: { color: '#475569', borderRadius: [4, 4, 0, 0] }, 
+                                    data: controlledData
+                                }
+                            ]
+                        };
+
+                        myChart.setOption(option);
+
+                        var handleResize = function() { myChart.resize(); };
+                        window.addEventListener('resize', handleResize);
+
+                        $scope.$on('$destroy', function() {
+                            window.removeEventListener('resize', handleResize);
+                            myChart.dispose();
+                        });
+                    });
+                };
+            }]
+        });
+
+        app.component('annualChart', {
+            template: `
+                <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-100 flex-1 flex flex-col">
+                    <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5 mr-2 text-emerald-500"></i>
+                            年度数据统计
+                        </h2>
+                        
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs text-slate-400">
+                                {{$ctrl.currentPage + 1}} / {{$ctrl.totalPages}} 页
+                            </span>
+                            <div class="flex space-x-1">
+                                <button ng-click="$ctrl.handlePrevPage()"
+                                        ng-disabled="$ctrl.currentPage === 0"
+                                        ng-class="$ctrl.currentPage === 0 ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'"
+                                        class="w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                                </button>
+                                <button ng-click="$ctrl.handleNextPage()"
+                                        ng-disabled="$ctrl.currentPage === $ctrl.totalPages - 1"
+                                        ng-class="$ctrl.currentPage === $ctrl.totalPages - 1 ? 'border-slate-200 text-slate-300 cursor-not-allowed bg-slate-50' : 'border-slate-300 text-slate-600 hover:border-primary hover:text-primary bg-white'"
+                                        class="w-7 h-7 rounded border flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-full relative px-2">
+                        <div id="annual-chart-container" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            `,
+            controller: ['IconService', '$timeout', '$scope', function(IconService, $timeout, $scope) {
+                var ctrl = this;
+                ctrl.totalItems = 24; // e.g., 2000 - 2023
+                ctrl.itemsPerPage = 10;
+                ctrl.currentPage = 0;
+                ctrl.totalPages = Math.ceil(ctrl.totalItems / ctrl.itemsPerPage);
+                
+                var myChart = null;
+
+                ctrl.handlePrevPage = function() {
+                    ctrl.currentPage = Math.max(0, ctrl.currentPage - 1);
+                    ctrl.updateChartZoom();
+                };
+
+                ctrl.handleNextPage = function() {
+                    ctrl.currentPage = Math.min(ctrl.totalPages - 1, ctrl.currentPage + 1);
+                    ctrl.updateChartZoom();
+                };
+
+                ctrl.updateChartZoom = function() {
+                    if (myChart) {
+                        var startValue = ctrl.currentPage * ctrl.itemsPerPage;
+                        var endValue = startValue + ctrl.itemsPerPage - 1;
+                        myChart.dispatchAction({
+                            type: 'dataZoom',
+                            startValue: startValue,
+                            endValue: endValue
+                        });
+                    }
+                };
+
+                ctrl.$onInit = function() {
+                    IconService.refresh();
+                };
+
+                ctrl.$postLink = function() {
+                    $timeout(function() {
+                        var chartDom = document.getElementById('annual-chart-container');
+                        myChart = echarts.init(chartDom);
+                        
+                        var startYear = 2000;
+                        var categories = Array.from({length: ctrl.totalItems}, function(_, i) { return (startYear + i) + '年'; });
+                        var openedData = Array.from({length: ctrl.totalItems}, function() { return Math.floor(Math.random() * 500) + 50; });
+                        var controlledData = Array.from({length: ctrl.totalItems}, function() { return Math.floor(Math.random() * 200) + 10; });
+
+                        var option = {
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: { type: 'shadow' },
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#e2e8f0',
+                                textStyle: { color: '#334155' },
+                                confine: true,
+                                appendToBody: true
+                            },
+                            legend: {
+                                data: ['开放数量', '受控数量'],
+                                right: '10%',
+                                top: 0,
+                                icon: 'circle',
+                                textStyle: { color: '#64748b' }
+                            },
+                            grid: {
+                                left: '4%',
+                                right: '10%',
+                                bottom: '5%',
+                                top: '15%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'category',
+                                data: categories,
+                                axisLine: { lineStyle: { color: '#cbd5e1' } },
+                                axisTick: { alignWithLabel: true, lineStyle: { color: '#cbd5e1' } },
+                                axisLabel: { color: '#64748b', interval: 0, margin: 10 }, 
+                                boundaryGap: true 
+                            },
+                            yAxis: {
+                                type: 'value',
+                                name: '单位：卷/件',
+                                nameTextStyle: { color: '#94a3b8', padding: [0, 0, 0, -20] },
+                                axisLabel: { color: '#64748b' },
+                                splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } }
+                            },
+                            dataZoom: [
+                                {
+                                    type: 'inside',
+                                    xAxisIndex: [0],
+                                    startValue: 0,
+                                    endValue: ctrl.itemsPerPage - 1,
+                                    zoomLock: true,
+                                    moveOnMouseMove: false,
+                                    moveOnMouseWheel: false
+                                }
+                            ],
+                            series: [
+                                {
+                                    name: '开放数量',
+                                    type: 'bar',
+                                    barWidth: '34%',
+                                    barMaxWidth: 28,
+                                    barGap: '15%',
+                                    itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }, 
+                                    data: openedData
+                                },
+                                {
+                                    name: '受控数量',
+                                    type: 'bar',
+                                    barWidth: '34%',
+                                    barMaxWidth: 28,
+                                    itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] }, 
                                     data: controlledData
                                 }
                             ]

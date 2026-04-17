@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MS-OAAS档案开放鉴定系统 - 元数据配置</title>
+    <title>MS-OAAS档案开放鉴定系统 - 角色权限</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
     <script src="./lib/tailwindcss.js"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#0369A1',
+                        primary: '#0369A1', // 政务风主色
                         secondary: '#334155',
                         background: '#F8FAFC',
                         surface: '#ffffff',
@@ -19,7 +21,9 @@
             }
         }
     </script>
+    <!-- 引入 AngularJS -->
     <script src="./lib/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
     <script src="./lib/lucide.min.js"></script>
     <link rel="stylesheet" href="./main.css">
 </head>
@@ -28,25 +32,30 @@
     <navbar></navbar>
     <breadcrumb></breadcrumb>
     
+    <!-- 主体内容区域 -->
     <main class="overflow-y-auto flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
-        <metadata-config-manage class="flex-1 flex flex-col min-w-0 w-full"></metadata-config-manage>
+        <role-permission-manage class="flex-1 flex flex-col min-w-0 w-full"></role-permission-manage>
     </main>
 
     <script>
         var app = angular.module('appraisalApp', []);
 
+        // 重新渲染图标的服务
         app.service('IconService', function($timeout) {
             var refreshPromise;
             this.refresh = function() {
                 if (refreshPromise) $timeout.cancel(refreshPromise);
                 refreshPromise = 
-                $timeout(function() { lucide.createIcons(); }, 0);
+                $timeout(function() {
+                    lucide.createIcons();
+                    refreshPromise = null;
+                }, 50, false);
             };
         });
 
         app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
             $timeout(function() {
-                $rootScope.$broadcast('NAVIGATE', '元数据配置', '系统管理');
+                $rootScope.$broadcast('NAVIGATE', '角色权限', '系统管理');
             });
         }]);
 
@@ -480,11 +489,11 @@
             }]);
         }
 
-        app.component('metadataConfigManage', {
+        app.component('rolePermissionManage', {
             template: `
-                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full relative">
-                    <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-                        <h2 class="text-lg font-bold text-slate-800">元数据配置</h2>
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-bold text-slate-800">角色权限</h2>
                         <div class="flex items-center space-x-3">
                             <button ng-click="$ctrl.batchImport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
                                 <i data-lucide="upload" class="w-4 h-4 mr-1"></i> 批量导入
@@ -493,15 +502,15 @@
                                 <i data-lucide="download" class="w-4 h-4 mr-1"></i> 批量导出
                             </button>
                             <button ng-click="$ctrl.openForm()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> 新增门类
+                                <i data-lucide="plus" class="w-4 h-4 mr-1"></i> 新增权限
                             </button>
                             <button ng-click="$ctrl.batchDelete()" ng-disabled="!$ctrl.hasSelected()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 删除门类
+                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 批量删除
                             </button>
                         </div>
                     </div>
                     
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto flex-1">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
@@ -509,10 +518,10 @@
                                         <input type="checkbox" ng-model="$ctrl.selectAll" ng-change="$ctrl.toggleAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
                                     </th>
                                     <th class="px-4 py-3 font-medium w-16">序号</th>
-                                    <th class="px-4 py-3 font-medium">门类代码</th>
-                                    <th class="px-4 py-3 font-medium">门类名称</th>
-                                    <th class="px-4 py-3 font-medium">元数据数量</th>
-                                    <th class="px-4 py-3 font-medium text-right">操作</th>
+                                    <th class="px-4 py-3 font-medium">用户名</th>
+                                    <th class="px-4 py-3 font-medium">用户类型</th>
+                                    <th class="px-4 py-3 font-medium">全宗</th>
+                                    <th class="px-4 py-3 font-medium text-right w-32">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -521,196 +530,211 @@
                                         <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
-                                    <td class="px-4 py-3 text-slate-800">{{item.categoryNo}}</td>
-                                    <td class="px-4 py-3 text-slate-800">{{item.categoryName}}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{item.metadataList ? item.metadataList.length : 0}} 个</td>
-                                    <td class="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                                        <button ng-click="$ctrl.openMetadataSettings(item)" class="text-blue-600 hover:text-blue-800 font-medium">设置元数据</button>
-                                        <button ng-click="$ctrl.viewMetadata(item)" class="text-sky-600 hover:text-sky-800 font-medium">查看元数据</button>
-                                        <button ng-click="$ctrl.editItem(item)" class="text-blue-600 hover:text-blue-800 font-medium">修改门类</button>
+                                    <td class="px-4 py-3 text-slate-800">{{item.username}}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">{{item.userType || '形成/移交单位用户'}}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.fondsName}}</td>
+                                    <td class="px-4 py-3 text-right space-x-3">
+                                        <button ng-click="$ctrl.editItem(item)" class="text-blue-600 hover:text-blue-800 font-medium">编辑</button>
+                                        <button ng-click="$ctrl.deleteItem(item)" class="text-red-600 hover:text-red-800 font-medium">删除</button>
                                     </td>
                                 </tr>
                                 <tr ng-if="$ctrl.list.length === 0">
-                                    <td colspan="6" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
+                                    <td colspan="5" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- 门类表单弹窗 -->
+                    <!-- 弹窗表单 -->
                     <div ng-if="$ctrl.showForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
-                        <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '修改' : '新增' }}门类</h3>
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEdit ? '编辑' : '新增' }}角色权限</h3>
                                 <button ng-click="$ctrl.closeForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
                             </div>
-                            <div class="p-6 space-y-4">
+                            <div class="p-6 space-y-4 overflow-y-auto">
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">门类代码 <span class="text-red-500">*</span></label>
-                                    <input type="text" ng-model="$ctrl.formData.categoryNo" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入门类代码">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">用户类型</label>
+                                    <input type="text" ng-model="$ctrl.formData.userType" disabled class="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-100 text-slate-500 cursor-not-allowed focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">门类名称 <span class="text-red-500">*</span></label>
-                                    <input type="text" ng-model="$ctrl.formData.categoryName" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入门类名称">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">用户名 <span class="text-red-500">*</span></label>
+                                    <select ng-model="$ctrl.formData.username" ng-change="$ctrl.onUserChange()" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                                        <option value="">请选择用户名</option>
+                                        <option ng-repeat="u in $ctrl.transferUsers" value="{{u.username}}">{{u.username}} ({{u.realName}})</option>
+                                    </select>
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">全宗 <span class="text-red-500">*</span></label>
+                                    <select ng-model="$ctrl.formData.fondsName" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+                                        <option value="">请选择全宗</option>
+                                        <option ng-repeat="f in $ctrl.fondsList" value="{{f.fondsName}}">{{f.fondsName}} ({{f.fondsNo}})</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- 菜单配置区域 -->
+                                <div class="mt-4 border-t border-slate-100 pt-4">
+                                    <h4 class="font-medium text-slate-800 mb-3 text-sm flex items-center">
+                                        <i data-lucide="layout-grid" class="w-4 h-4 mr-1.5 text-primary"></i>功能菜单配置
+                                    </h4>
+                                    
+                                    <div class="space-y-4">
+                                        <!-- 默认菜单 -->
+                                        <div class="bg-slate-50 p-3 rounded-md border border-slate-200">
+                                            <div class="text-xs font-semibold text-slate-500 mb-2">默认菜单 (不可修改)</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <label class="inline-flex items-center bg-white px-3 py-1.5 rounded border border-slate-200 text-sm text-slate-500 cursor-not-allowed">
+                                                    <input type="checkbox" checked disabled class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 bg-slate-100 mr-2">
+                                                    <span>工作台</span>
+                                                </label>
+                                                <label class="inline-flex items-center bg-white px-3 py-1.5 rounded border border-slate-200 text-sm text-slate-500 cursor-not-allowed">
+                                                    <input type="checkbox" checked disabled class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 bg-slate-100 mr-2">
+                                                    <span>鉴定任务管理：本全宗鉴定任务</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- 选配菜单 -->
+                                        <div class="border border-slate-200 rounded-md p-3">
+                                            <div class="text-xs font-semibold text-slate-500 mb-3">选配菜单 (可多选)</div>
+                                            
+                                            <!-- 鉴定规则配置组 -->
+                                            <div class="mb-4 last:mb-0">
+                                                <div class="text-sm font-medium text-slate-700 mb-2 flex items-center">
+                                                    <input type="checkbox" ng-model="$ctrl.menuSelection.rules.all" ng-change="$ctrl.toggleMenuGroup('rules')" class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 mr-2 cursor-pointer">
+                                                    鉴定规则配置
+                                                </div>
+                                                <div class="flex flex-wrap gap-2 pl-5">
+                                                    <label ng-repeat="menu in $ctrl.optionalMenus.rules" class="inline-flex items-center bg-slate-50 hover:bg-sky-50 px-3 py-1.5 rounded border border-slate-200 cursor-pointer transition-colors text-sm">
+                                                        <input type="checkbox" ng-model="$ctrl.menuSelection.rules.items[menu]" ng-change="$ctrl.updateGroupState('rules')" class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 mr-2 cursor-pointer">
+                                                        <span class="text-slate-700">{{menu}}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <!-- 系统管理组 -->
+                                            <div class="mb-4 last:mb-0">
+                                                <div class="text-sm font-medium text-slate-700 mb-2 flex items-center">
+                                                    <input type="checkbox" ng-model="$ctrl.menuSelection.system.all" ng-change="$ctrl.toggleMenuGroup('system')" class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 mr-2 cursor-pointer">
+                                                    系统管理
+                                                </div>
+                                                <div class="flex flex-wrap gap-2 pl-5">
+                                                    <label ng-repeat="menu in $ctrl.optionalMenus.system" class="inline-flex items-center bg-slate-50 hover:bg-sky-50 px-3 py-1.5 rounded border border-slate-200 cursor-pointer transition-colors text-sm">
+                                                        <input type="checkbox" ng-model="$ctrl.menuSelection.system.items[menu]" ng-change="$ctrl.updateGroupState('system')" class="form-checkbox h-3.5 w-3.5 text-primary rounded border-slate-300 mr-2 cursor-pointer">
+                                                        <span class="text-slate-700">{{menu}}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                
+                                
+                                
                             </div>
-                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3 mt-auto">
                                 <button ng-click="$ctrl.closeForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
                                 <button ng-click="$ctrl.saveForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
                             </div>
                         </div>
                     </div>
-
-                    <!-- 元数据设置/查看全屏侧滑视图 -->
-                    <div ng-if="$ctrl.showMetadataView" class="absolute inset-0 bg-white z-[90] flex flex-col h-full shadow-sm rounded-lg overflow-hidden animate-[slideIn_0.3s_ease-out]">
-                        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                            <div class="flex items-center">
-                                <button ng-click="$ctrl.closeMetadataView()" class="mr-4 text-slate-400 hover:text-slate-600 transition-colors">
-                                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                                </button>
-                                <h3 class="font-bold text-lg text-slate-800">
-                                    {{ $ctrl.isViewingOnly ? '查看' : '设置' }}元数据 <span class="text-sm font-normal text-slate-500 ml-2">({{$ctrl.currentCategory.categoryName}})</span>
-                                </h3>
-                            </div>
-                            <div class="flex space-x-3" ng-if="!$ctrl.isViewingOnly">
-                                <button ng-click="$ctrl.batchImportMetadata()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                    <i data-lucide="upload" class="w-4 h-4 mr-1"></i> 批量导入
-                                </button>
-                                <button ng-click="$ctrl.batchExportMetadata()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                    <i data-lucide="download" class="w-4 h-4 mr-1"></i> 批量导出
-                                </button>
-                                <button ng-click="$ctrl.openMetadataForm()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                    <i data-lucide="plus" class="w-4 h-4 mr-1"></i> 新增元数据
-                                </button>
-                                <button ng-click="$ctrl.batchDeleteMetadata()" ng-disabled="!$ctrl.hasSelectedMetadata()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-md text-sm transition-colors flex items-center">
-                                    <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 批量删除
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="flex-1 p-6 overflow-y-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
-                                        <th class="px-4 py-3 font-medium w-12" ng-if="!$ctrl.isViewingOnly">
-                                            <input type="checkbox" ng-model="$ctrl.selectAllMetadata" ng-change="$ctrl.toggleAllMetadata()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
-                                        </th>
-                                        <th class="px-4 py-3 font-medium w-16">序号</th>
-                                        <th class="px-4 py-3 font-medium">元数据名称</th>
-                                        <th class="px-4 py-3 font-medium">字段类型</th>
-                                        <th class="px-4 py-3 font-medium">长度</th>
-                                        <th class="px-4 py-3 font-medium text-right" ng-if="!$ctrl.isViewingOnly">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr ng-repeat="meta in $ctrl.currentCategory.metadataList" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
-                                        <td class="px-4 py-3" ng-if="!$ctrl.isViewingOnly">
-                                            <input type="checkbox" ng-model="meta.selected" ng-change="$ctrl.updateSelectAllMetadata()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
-                                        </td>
-                                        <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
-                                        <td class="px-4 py-3 text-slate-800">{{meta.name}}</td>
-                                        <td class="px-4 py-3 text-slate-800">
-                                            <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">{{meta.type}}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-slate-800">{{meta.length || '-'}}</td>
-                                        <td class="px-4 py-3 text-right space-x-3" ng-if="!$ctrl.isViewingOnly">
-                                            <button ng-click="$ctrl.editMetadata(meta)" class="text-blue-600 hover:text-blue-800 font-medium">修改</button>
-                                            <button ng-click="$ctrl.deleteMetadata(meta)" class="text-red-600 hover:text-red-800 font-medium">删除</button>
-                                        </td>
-                                    </tr>
-                                    <tr ng-if="!$ctrl.currentCategory.metadataList || $ctrl.currentCategory.metadataList.length === 0">
-                                        <td colspan="{{$ctrl.isViewingOnly ? 4 : 6}}" class="px-4 py-8 text-center text-slate-500">该门类暂无元数据配置</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- 新增/修改元数据弹窗 -->
-                    <div ng-if="$ctrl.showMetadataForm" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[110]">
-                        <div class="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-                            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-lg text-slate-800">{{ $ctrl.isEditMetadata ? '修改' : '新增' }}元数据</h3>
-                                <button ng-click="$ctrl.closeMetadataForm()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-                            </div>
-                            <div class="p-6 space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">元数据名称 <span class="text-red-500">*</span></label>
-                                    <input type="text" ng-model="$ctrl.metaFormData.name" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入元数据名称">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">字段类型 <span class="text-red-500">*</span></label>
-                                    <select ng-model="$ctrl.metaFormData.type" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
-                                        <option value="">请选择字段类型</option>
-                                        <option value="字符串">字符串</option>
-                                        <option value="数字">数字</option>
-                                        <option value="日期时间">日期时间</option>
-                                        <option value="布尔值">布尔值</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">长度</label>
-                                    <input type="number" ng-model="$ctrl.metaFormData.length" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="例如：255 (选填)">
-                                </div>
-                            </div>
-                            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
-                                <button ng-click="$ctrl.closeMetadataForm()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-100 transition-colors text-sm font-medium">取消</button>
-                                <button ng-click="$ctrl.saveMetadataForm()" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-sky-800 transition-colors text-sm font-medium">保存</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <style>
-                        @keyframes slideIn {
-                            from { transform: translateX(20px); opacity: 0; }
-                            to { transform: translateX(0); opacity: 1; }
-                        }
-                    </style>
                 </div>
             `,
             controller: ['IconService', '$timeout', function(IconService, $timeout) {
                 var ctrl = this;
                 
-                var defaultMetadata = [
-                    { id: 101, name: '全宗号', type: '字符串', length: 50, selected: false },
-                    { id: 102, name: '档号', type: '字符串', length: 100, selected: false },
-                    { id: 103, name: '文件题名', type: '字符串', length: 255, selected: false },
-                    { id: 104, name: '责任者', type: '字符串', length: 100, selected: false },
-                    { id: 105, name: '保管期限', type: '字符串', length: 20, selected: false },
-                    { id: 106, name: '成文日期', type: '日期时间', length: null, selected: false }
-                ];
-
-                var storedList = localStorage.getItem('oaas_metadata_category_list');
-                var needReset = false;
+                var storedList = localStorage.getItem('oaas_role_permissions');
                 if (storedList) {
                     try {
                         ctrl.list = JSON.parse(storedList);
-                        // 简单判断是否已经包含了新需求中的字段
-                        if (ctrl.list.length > 0 && ctrl.list[0].metadataList && ctrl.list[0].metadataList.length > 0) {
-                            if (ctrl.list[0].metadataList[0].name !== '全宗号') {
-                                needReset = true;
-                            }
-                        } else {
-                            needReset = true;
-                        }
                     } catch(e) {
-                        needReset = true;
+                        ctrl.list = [];
                     }
                 } else {
-                    needReset = true;
+                    ctrl.list = [
+                        { id: 1, username: 'lisi', fondsName: 'XX市发改委', selected: false }
+                    ];
+                    localStorage.setItem('oaas_role_permissions', JSON.stringify(ctrl.list));
                 }
 
-                if (needReset) {
-                    ctrl.list = [
-                        { id: 1, categoryNo: 'WS', categoryName: '文书档案', selected: false, metadataList: angular.copy(defaultMetadata) },
-                        { id: 2, categoryNo: 'ZP', categoryName: '照片档案', selected: false, metadataList: angular.copy(defaultMetadata) },
-                        { id: 3, categoryNo: 'KJ', categoryName: '科技档案', selected: false, metadataList: angular.copy(defaultMetadata) }
-                    ];
-                    localStorage.setItem('oaas_metadata_category_list', JSON.stringify(ctrl.list));
-                }
+                // Load users of type "形成/移交单位用户"
+                var allUsers = [];
+                try {
+                    allUsers = JSON.parse(localStorage.getItem('oaas_user_list')) || [];
+                } catch(e) {}
+                ctrl.transferUsers = allUsers.filter(function(u) { return u.userType === '形成/移交单位用户'; });
+
+                // Load fonds list
+                ctrl.fondsList = [];
+                try {
+                    ctrl.fondsList = JSON.parse(localStorage.getItem('oaas_fonds_list')) || [];
+                } catch(e) {}
 
                 ctrl.saveData = function() {
-                    localStorage.setItem('oaas_metadata_category_list', JSON.stringify(ctrl.list));
+                    localStorage.setItem('oaas_role_permissions', JSON.stringify(ctrl.list));
+                };
+
+                
+                ctrl.optionalMenus = {
+                    rules: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'],
+                    system: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置']
+                };
+                
+                ctrl.initMenuSelection = function() {
+                    ctrl.menuSelection = {
+                        rules: { all: false, items: {} },
+                        system: { all: false, items: {} }
+                    };
+                    ctrl.optionalMenus.rules.forEach(function(m) { ctrl.menuSelection.rules.items[m] = false; });
+                    ctrl.optionalMenus.system.forEach(function(m) { ctrl.menuSelection.system.items[m] = false; });
+                };
+                
+                ctrl.toggleMenuGroup = function(group) {
+                    var isAll = ctrl.menuSelection[group].all;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        ctrl.menuSelection[group].items[m] = isAll;
+                    });
+                };
+                
+                ctrl.updateGroupState = function(group) {
+                    var allChecked = true;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        if (!ctrl.menuSelection[group].items[m]) {
+                            allChecked = false;
+                        }
+                    });
+                    ctrl.menuSelection[group].all = allChecked;
+                };
+
+                ctrl.getSelectedMenus = function() {
+                    var selected = [];
+                    ctrl.optionalMenus.rules.forEach(function(m) {
+                        if (ctrl.menuSelection.rules.items[m]) selected.push(m);
+                    });
+                    ctrl.optionalMenus.system.forEach(function(m) {
+                        if (ctrl.menuSelection.system.items[m]) selected.push(m);
+                    });
+                    return selected;
+                };
+                
+                ctrl.loadSelectedMenus = function(selectedMenus) {
+                    ctrl.initMenuSelection();
+                    if (!selectedMenus || !selectedMenus.length) return;
+                    
+                    selectedMenus.forEach(function(m) {
+                        if (ctrl.optionalMenus.rules.indexOf(m) !== -1) {
+                            ctrl.menuSelection.rules.items[m] = true;
+                        } else if (ctrl.optionalMenus.system.indexOf(m) !== -1) {
+                            ctrl.menuSelection.system.items[m] = true;
+                        }
+                    });
+                    
+                    ctrl.updateGroupState('rules');
+                    ctrl.updateGroupState('system');
                 };
 
                 ctrl.showForm = false;
@@ -718,55 +742,61 @@
                 ctrl.formData = {};
                 ctrl.selectAll = false;
 
-                // 元数据视图状态
-                ctrl.showMetadataView = false;
-                ctrl.isViewingOnly = false;
-                ctrl.currentCategory = null;
-                ctrl.selectAllMetadata = false;
-
-                // 元数据表单状态
-                ctrl.showMetadataForm = false;
-                ctrl.isEditMetadata = false;
-                ctrl.metaFormData = {};
-
                 ctrl.$onInit = function() {
                     IconService.refresh();
                 };
 
-                // ===== 门类管理相关方法 =====
-                
-                ctrl.batchImport = function() { alert('请选择要导入的门类配置 Excel/CSV 文件'); };
+
+                ctrl.onUserChange = function() {
+                    var selectedUser = ctrl.transferUsers.find(function(u) { return u.username === ctrl.formData.username; });
+                    if (selectedUser) {
+                        ctrl.formData.userType = selectedUser.userType;
+                    } else {
+                        ctrl.formData.userType = '';
+                    }
+                };
+
+                ctrl.batchImport = function() {
+                    alert('请选择要导入的 Excel/CSV 文件');
+                };
 
                 ctrl.batchExport = function() {
                     if (!ctrl.hasSelected()) {
-                        alert('将导出所有门类及元数据配置');
+                        alert('将导出所有角色权限数据');
                     } else {
                         var selectedCount = ctrl.list.filter(function(item) { return item.selected; }).length;
-                        alert('将导出选中的 ' + selectedCount + ' 项门类及元数据配置');
+                        alert('将导出选中的 ' + selectedCount + ' 项角色权限数据');
                     }
                 };
 
                 ctrl.toggleAll = function() {
-                    ctrl.list.forEach(function(item) { item.selected = ctrl.selectAll; });
+                    ctrl.list.forEach(function(item) {
+                        item.selected = ctrl.selectAll;
+                    });
                 };
 
                 ctrl.updateSelectAll = function() {
                     if (ctrl.list.length === 0) {
-                        ctrl.selectAll = false; return;
+                        ctrl.selectAll = false;
+                        return;
                     }
-                    ctrl.selectAll = ctrl.list.every(function(item) { return item.selected; });
+                    ctrl.selectAll = ctrl.list.every(function(item) {
+                        return item.selected;
+                    });
                 };
 
                 ctrl.hasSelected = function() {
-                    return ctrl.list.some(function(item) { return item.selected; });
+                    return ctrl.list.some(function(item) {
+                        return item.selected;
+                    });
                 };
 
                 ctrl.batchDelete = function() {
-                    var selectedItems = ctrl.list.filter(function(item) { return item.selected; });
-                    if (selectedItems.length === 0) return;
+                    var selectedIds = ctrl.list.filter(function(item) { return item.selected; }).map(function(item) { return item.id; });
+                    if (selectedIds.length === 0) return;
                     
-                    if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项门类吗？')) {
-                        ctrl.list = ctrl.list.filter(function(item) { return !item.selected; });
+                    if (confirm('确定要删除选中的 ' + selectedIds.length + ' 个权限配置吗？')) {
+                        ctrl.list = ctrl.list.filter(function(item) { return selectedIds.indexOf(item.id) === -1; });
                         ctrl.selectAll = false;
                         ctrl.saveData();
                         IconService.refresh();
@@ -775,161 +805,184 @@
 
                 ctrl.openForm = function() {
                     ctrl.isEdit = false;
-                    ctrl.formData = {};
+                    ctrl.formData = { username: '', fondsName: '', userType: '形成/移交单位用户', selectedMenus: [] };
+                    ctrl.initMenuSelection();
+                    ctrl.loadSelectedMenus(ctrl.formData.selectedMenus);
                     ctrl.showForm = true;
-                    IconService.refresh();
+                    $timeout(function(){IconService.refresh();}, 0);
                 };
 
                 ctrl.editItem = function(item) {
                     ctrl.isEdit = true;
                     ctrl.formData = angular.copy(item);
+                    if (!ctrl.formData.userType) {
+                        var selectedUser = ctrl.transferUsers.find(function(u) { return u.username === ctrl.formData.username; });
+                        ctrl.formData.userType = selectedUser ? selectedUser.userType : '形成/移交单位用户';
+                    }
+                    ctrl.loadSelectedMenus(ctrl.formData.selectedMenus);
                     ctrl.showForm = true;
-                    IconService.refresh();
+                    $timeout(function(){IconService.refresh();}, 0);
                 };
 
-                ctrl.closeForm = function() { ctrl.showForm = false; };
+                ctrl.deleteItem = function(item) {
+                    if (confirm('确定要删除用户 "' + item.username + '" 的权限配置吗？')) {
+                        var index = ctrl.list.findIndex(function(i) { return i.id === item.id; });
+                        if (index > -1) {
+                            ctrl.list.splice(index, 1);
+                            ctrl.saveData();
+                        }
+                    }
+                };
+
+                ctrl.closeForm = function() {
+                    
+                ctrl.optionalMenus = {
+                    rules: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'],
+                    system: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置']
+                };
+                
+                ctrl.initMenuSelection = function() {
+                    ctrl.menuSelection = {
+                        rules: { all: false, items: {} },
+                        system: { all: false, items: {} }
+                    };
+                    ctrl.optionalMenus.rules.forEach(function(m) { ctrl.menuSelection.rules.items[m] = false; });
+                    ctrl.optionalMenus.system.forEach(function(m) { ctrl.menuSelection.system.items[m] = false; });
+                };
+                
+                ctrl.toggleMenuGroup = function(group) {
+                    var isAll = ctrl.menuSelection[group].all;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        ctrl.menuSelection[group].items[m] = isAll;
+                    });
+                };
+                
+                ctrl.updateGroupState = function(group) {
+                    var allChecked = true;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        if (!ctrl.menuSelection[group].items[m]) {
+                            allChecked = false;
+                        }
+                    });
+                    ctrl.menuSelection[group].all = allChecked;
+                };
+
+                ctrl.getSelectedMenus = function() {
+                    var selected = [];
+                    ctrl.optionalMenus.rules.forEach(function(m) {
+                        if (ctrl.menuSelection.rules.items[m]) selected.push(m);
+                    });
+                    ctrl.optionalMenus.system.forEach(function(m) {
+                        if (ctrl.menuSelection.system.items[m]) selected.push(m);
+                    });
+                    return selected;
+                };
+                
+                ctrl.loadSelectedMenus = function(selectedMenus) {
+                    ctrl.initMenuSelection();
+                    if (!selectedMenus || !selectedMenus.length) return;
+                    
+                    selectedMenus.forEach(function(m) {
+                        if (ctrl.optionalMenus.rules.indexOf(m) !== -1) {
+                            ctrl.menuSelection.rules.items[m] = true;
+                        } else if (ctrl.optionalMenus.system.indexOf(m) !== -1) {
+                            ctrl.menuSelection.system.items[m] = true;
+                        }
+                    });
+                    
+                    ctrl.updateGroupState('rules');
+                    ctrl.updateGroupState('system');
+                };
+
+                ctrl.showForm = false;
+                };
 
                 ctrl.saveForm = function() {
-                    if (!ctrl.formData.categoryNo) { alert('请输入门类代码'); return; }
-                    if (!ctrl.formData.categoryName) { alert('请输入门类名称'); return; }
+                    if (!ctrl.formData.username) {
+                        alert('请选择用户名');
+                        return;
+                    }
+                    if (!ctrl.formData.fondsName) {
+                        alert('请选择全宗');
+                        return;
+                    }
                     
                     if (ctrl.isEdit) {
+                        ctrl.formData.selectedMenus = ctrl.getSelectedMenus();
                         var index = ctrl.list.findIndex(function(i) { return i.id === ctrl.formData.id; });
                         if (index > -1) {
                             var updatedItem = angular.copy(ctrl.formData);
                             updatedItem.selected = ctrl.list[index].selected;
-                            // 保留原有的元数据列表
-                            updatedItem.metadataList = ctrl.list[index].metadataList || [];
                             ctrl.list[index] = updatedItem;
                         }
                     } else {
+                        ctrl.formData.selectedMenus = ctrl.getSelectedMenus();
                         ctrl.formData.id = Date.now();
                         ctrl.formData.selected = false;
-                        ctrl.formData.metadataList = [];
                         ctrl.list.push(angular.copy(ctrl.formData));
                     }
                     ctrl.saveData();
-                    ctrl.showForm = false;
+                    
+                ctrl.optionalMenus = {
+                    rules: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'],
+                    system: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置']
+                };
+                
+                ctrl.initMenuSelection = function() {
+                    ctrl.menuSelection = {
+                        rules: { all: false, items: {} },
+                        system: { all: false, items: {} }
+                    };
+                    ctrl.optionalMenus.rules.forEach(function(m) { ctrl.menuSelection.rules.items[m] = false; });
+                    ctrl.optionalMenus.system.forEach(function(m) { ctrl.menuSelection.system.items[m] = false; });
+                };
+                
+                ctrl.toggleMenuGroup = function(group) {
+                    var isAll = ctrl.menuSelection[group].all;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        ctrl.menuSelection[group].items[m] = isAll;
+                    });
+                };
+                
+                ctrl.updateGroupState = function(group) {
+                    var allChecked = true;
+                    ctrl.optionalMenus[group].forEach(function(m) {
+                        if (!ctrl.menuSelection[group].items[m]) {
+                            allChecked = false;
+                        }
+                    });
+                    ctrl.menuSelection[group].all = allChecked;
+                };
+
+                ctrl.getSelectedMenus = function() {
+                    var selected = [];
+                    ctrl.optionalMenus.rules.forEach(function(m) {
+                        if (ctrl.menuSelection.rules.items[m]) selected.push(m);
+                    });
+                    ctrl.optionalMenus.system.forEach(function(m) {
+                        if (ctrl.menuSelection.system.items[m]) selected.push(m);
+                    });
+                    return selected;
+                };
+                
+                ctrl.loadSelectedMenus = function(selectedMenus) {
+                    ctrl.initMenuSelection();
+                    if (!selectedMenus || !selectedMenus.length) return;
+                    
+                    selectedMenus.forEach(function(m) {
+                        if (ctrl.optionalMenus.rules.indexOf(m) !== -1) {
+                            ctrl.menuSelection.rules.items[m] = true;
+                        } else if (ctrl.optionalMenus.system.indexOf(m) !== -1) {
+                            ctrl.menuSelection.system.items[m] = true;
+                        }
+                    });
+                    
+                    ctrl.updateGroupState('rules');
+                    ctrl.updateGroupState('system');
+                };
+
+                ctrl.showForm = false;
                     IconService.refresh();
-                };
-
-                // ===== 元数据管理相关方法 =====
-
-                ctrl.batchImportMetadata = function() {
-                    alert('请选择要导入的元数据 Excel/CSV 文件');
-                };
-
-                ctrl.batchExportMetadata = function() {
-                    if (!ctrl.hasSelectedMetadata()) {
-                        alert('将导出该门类下的所有元数据配置');
-                    } else {
-                        var selectedCount = ctrl.currentCategory.metadataList.filter(function(item) { return item.selected; }).length;
-                        alert('将导出选中的 ' + selectedCount + ' 项元数据配置');
-                    }
-                };
-
-                ctrl.toggleAllMetadata = function() {
-                    if (!ctrl.currentCategory || !ctrl.currentCategory.metadataList) return;
-                    ctrl.currentCategory.metadataList.forEach(function(item) { item.selected = ctrl.selectAllMetadata; });
-                };
-
-                ctrl.updateSelectAllMetadata = function() {
-                    if (!ctrl.currentCategory || !ctrl.currentCategory.metadataList || ctrl.currentCategory.metadataList.length === 0) {
-                        ctrl.selectAllMetadata = false; return;
-                    }
-                    ctrl.selectAllMetadata = ctrl.currentCategory.metadataList.every(function(item) { return item.selected; });
-                };
-
-                ctrl.hasSelectedMetadata = function() {
-                    if (!ctrl.currentCategory || !ctrl.currentCategory.metadataList) return false;
-                    return ctrl.currentCategory.metadataList.some(function(item) { return item.selected; });
-                };
-
-                ctrl.batchDeleteMetadata = function() {
-                    if (!ctrl.currentCategory || !ctrl.currentCategory.metadataList) return;
-                    var selectedItems = ctrl.currentCategory.metadataList.filter(function(item) { return item.selected; });
-                    if (selectedItems.length === 0) return;
-                    
-                    if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项元数据吗？')) {
-                        ctrl.currentCategory.metadataList = ctrl.currentCategory.metadataList.filter(function(item) { return !item.selected; });
-                        ctrl.selectAllMetadata = false;
-                        ctrl.saveData();
-                        IconService.refresh();
-                    }
-                };
-
-                ctrl.openMetadataSettings = function(category) {
-                    ctrl.currentCategory = category;
-                    ctrl.isViewingOnly = false;
-                    ctrl.selectAllMetadata = false;
-                    if (ctrl.currentCategory.metadataList) {
-                        ctrl.currentCategory.metadataList.forEach(function(item) { item.selected = false; });
-                    }
-                    ctrl.showMetadataView = true;
-                    $timeout(function() { IconService.refresh(); }, 50, false);
-                };
-
-                ctrl.viewMetadata = function(category) {
-                    ctrl.currentCategory = category;
-                    ctrl.isViewingOnly = true;
-                    ctrl.showMetadataView = true;
-                    $timeout(function() { IconService.refresh(); }, 50, false);
-                };
-
-                ctrl.closeMetadataView = function() {
-                    ctrl.showMetadataView = false;
-                    ctrl.currentCategory = null;
-                };
-
-                ctrl.openMetadataForm = function() {
-                    ctrl.isEditMetadata = false;
-                    ctrl.metaFormData = { type: '' };
-                    ctrl.showMetadataForm = true;
-                    $timeout(function() { IconService.refresh(); }, 0);
-                };
-
-                ctrl.editMetadata = function(meta) {
-                    ctrl.isEditMetadata = true;
-                    ctrl.metaFormData = angular.copy(meta);
-                    ctrl.showMetadataForm = true;
-                    $timeout(function() { IconService.refresh(); }, 0);
-                };
-
-                ctrl.deleteMetadata = function(meta) {
-                    if (confirm('确定要删除元数据 "' + meta.name + '" 吗？')) {
-                        var index = ctrl.currentCategory.metadataList.findIndex(function(i) { return i.id === meta.id; });
-                        if (index > -1) {
-                            ctrl.currentCategory.metadataList.splice(index, 1);
-                            ctrl.saveData(); // 立即持久化
-                        }
-                    }
-                };
-
-                ctrl.closeMetadataForm = function() {
-                    ctrl.showMetadataForm = false;
-                };
-
-                ctrl.saveMetadataForm = function() {
-                    if (!ctrl.metaFormData.name) { alert('请输入元数据名称'); return; }
-                    if (!ctrl.metaFormData.type) { alert('请选择字段类型'); return; }
-
-                    if (!ctrl.currentCategory.metadataList) {
-                        ctrl.currentCategory.metadataList = [];
-                    }
-
-                    if (ctrl.isEditMetadata) {
-                        var index = ctrl.currentCategory.metadataList.findIndex(function(i) { return i.id === ctrl.metaFormData.id; });
-                        if (index > -1) {
-                            ctrl.currentCategory.metadataList[index] = angular.copy(ctrl.metaFormData);
-                        }
-                    } else {
-                        ctrl.metaFormData.id = Date.now();
-                        ctrl.currentCategory.metadataList.push(angular.copy(ctrl.metaFormData));
-                    }
-                    
-                    ctrl.saveData(); // 持久化更改
-                    ctrl.showMetadataForm = false;
-                    $timeout(function() { IconService.refresh(); }, 0);
                 };
             }]
         });
