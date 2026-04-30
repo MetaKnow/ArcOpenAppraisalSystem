@@ -128,7 +128,7 @@
                     { name: '工作台' },
                     { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
                     { name: '鉴定任务管理' },
-                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置', '日志管理'] }
                 ];
                 
                 ctrl.filteredMenuItems = [];
@@ -211,6 +211,8 @@
                         '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html',
                         '任务审核': 'appraisal-task-audit.html'
+                    ,
+                        '日志管理': 'log-management.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -309,6 +311,8 @@
                     '修改任务': 'appraisal-task-edit.html',
                     '元数据配置': 'metadata-config.html',
                     '鉴定流程配置': 'appraisal-process-config.html'
+                ,
+                    '日志管理': 'log-management.html'
                 };
                 
                 var nameMap = {};

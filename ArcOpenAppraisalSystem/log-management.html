@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MS-OAAS档案开放鉴定系统 - 新建任务</title>
+    <title>MS-OAAS档案开放鉴定系统 - 日志管理</title>
     <!-- 引入 Tailwind CSS 进行样式管理 -->
     <script src="./lib/tailwindcss.js"></script>
     <!-- 配置 Tailwind 主题颜色 -->
@@ -26,22 +26,6 @@
     <!-- 引入 Lucide 图标库 -->
     <script src="./lib/lucide.min.js"></script>
     <link rel="stylesheet" href="./main.css">
-    <style>
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9; 
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-    </style>
 </head>
 <body ng-controller="MainController as ctrl" class="h-screen overflow-hidden flex flex-col bg-slate-50">
     
@@ -49,8 +33,8 @@
     <breadcrumb></breadcrumb>
     
     <!-- 主体内容区域 -->
-    <main class="overflow-y-auto flex-1 p-4 md:px-8 flex flex-col gap-5 w-full box-border relative max-w-7xl mx-auto">
-        <appraisal-task-view class="flex-1 flex flex-col min-w-0 w-full"></appraisal-task-view>
+    <main class="overflow-y-auto flex-1 p-4 md:px-8 flex flex-col lg:flex-row gap-5 w-full box-border relative">
+        <log-manage class="flex-1 flex flex-col min-w-0 w-full"></log-manage>
     </main>
 
     <script>
@@ -70,89 +54,10 @@
         });
 
         app.controller('MainController', ['IconService', '$timeout', '$rootScope', function(IconService, $timeout, $rootScope) {
-            var ctrl = this;
-            
-            // 初始化导航状态
             $timeout(function() {
-                $rootScope.$broadcast('NAVIGATE', '查看任务', '鉴定任务管理');
+                $rootScope.$broadcast('NAVIGATE', '日志管理', '系统管理');
             });
         }]);
-
-        // 多选下拉组件
-        app.component('multiSelect', {
-            bindings: {
-                options: '=',
-                placeholder: '@',
-                emptyMessage: '@'
-            },
-            template: `
-                <div class="relative" ng-click="$event.stopPropagation()">
-                    <div class="w-full px-3 py-2 border border-slate-300 rounded-md focus-within:ring-2 focus-within:ring-sky-100 focus-within:border-primary bg-white cursor-pointer min-h-[38px] flex flex-wrap gap-1 items-center" 
-                         ng-click="!$ctrl.isEmpty() && ($ctrl.isOpen = !$ctrl.isOpen)"
-                         ng-class="{'bg-slate-50 cursor-not-allowed': $ctrl.isEmpty()}">
-                        
-                        <!-- 占位符或空提示 -->
-                        <span ng-if="!$ctrl.hasSelected() && !$ctrl.isEmpty()" class="text-slate-400 text-sm">{{$ctrl.placeholder}}</span>
-                        <span ng-if="$ctrl.isEmpty()" class="text-slate-400 text-sm">{{$ctrl.emptyMessage || '无可用选项'}}</span>
-                        
-                        <!-- 已选项 -->
-                        <span ng-repeat="opt in $ctrl.options | filter:{selected: true}" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
-                            {{opt.name}}
-                            <i data-lucide="x" class="w-3 h-3 ml-1 cursor-pointer hover:text-sky-900" ng-click="opt.selected = false; $event.stopPropagation(); $ctrl.updateIcons()"></i>
-                        </span>
-                        
-                        <i data-lucide="chevron-down" class="w-4 h-4 ml-auto text-slate-400 transition-transform" ng-class="{'rotate-180': $ctrl.isOpen}"></i>
-                    </div>
-                    
-                    <!-- 下拉列表 -->
-                    <div ng-show="$ctrl.isOpen" class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto custom-scrollbar">
-                        <div class="p-2.5 hover:bg-slate-50 cursor-pointer flex items-center transition-colors" 
-                             ng-repeat="opt in $ctrl.options" 
-                             ng-click="opt.selected = !opt.selected; $ctrl.updateIcons(); $event.stopPropagation();">
-                            <div class="w-4 h-4 border rounded mr-2 flex items-center justify-center flex-shrink-0 transition-colors" 
-                                 ng-class="opt.selected ? 'bg-primary border-primary' : 'border-slate-300'">
-                                <i data-lucide="check" class="w-3 h-3 text-white" ng-show="opt.selected"></i>
-                            </div>
-                            <span class="text-sm text-slate-700 select-none">{{opt.name}}</span>
-                        </div>
-                    </div>
-                </div>
-            `,
-            controller: ['$scope', '$document', 'IconService', '$timeout', function($scope, $document, IconService, $timeout) {
-                var ctrl = this;
-                ctrl.isOpen = false;
-                
-                ctrl.isEmpty = function() {
-                    return !ctrl.options || ctrl.options.length === 0;
-                };
-
-                ctrl.hasSelected = function() {
-                    if (ctrl.isEmpty()) return false;
-                    return ctrl.options.some(function(o) { return o.selected; });
-                };
-
-                ctrl.updateIcons = function() {
-                    $timeout(function() { IconService.refresh(); }, 0);
-                };
-
-                var clickHandler = function() {
-                    if (ctrl.isOpen) {
-                        $scope.$apply(function() {
-                            ctrl.isOpen = false;
-                        });
-                    }
-                };
-
-                $document.on('click', clickHandler);
-                $scope.$on('$destroy', function() {
-                    $document.off('click', clickHandler);
-                });
-
-                ctrl.$onInit = function() {
-                    ctrl.updateIcons();
-                };
-            }]
-        });
 
         app.component('navbar', {
             template: `
@@ -588,234 +493,175 @@
             }]);
         }
 
-        app.component('appraisalTaskView', {
+        app.component('logManage', {
             template: `
-                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-6 flex flex-col">
-                    <div class="w-full flex-1 flex flex-col">
-                        <!-- 任务名称居中显示 -->
-                        <div class="text-center mb-8 border-b border-slate-100 pb-4">
-                            <h3 class="text-2xl font-bold text-slate-800">{{$ctrl.task.title || '鉴定任务名称'}}</h3>
-                        </div>
-
-                        <!-- 表单信息展示区 -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8 bg-slate-50 p-6 rounded-lg border border-slate-100">
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">全宗号</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.fondsCode || '默认全宗号'}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">全宗名称</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.fondsName || '默认全宗名称'}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">鉴定年度</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.year || '2023'}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">档案门类</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.category || '文书档案'}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">数据总量</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.total || 0}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">开放数量</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.opened || 0}}</span>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-sm text-slate-500 mb-1">受控数量</span>
-                                <span class="text-base font-medium text-slate-800">{{$ctrl.task.checked || 0}}</span>
-                            </div>
-                        </div>
-
-                        <!-- 按钮区 -->
-                        <div class="flex items-center space-x-3 mb-4">
-                            <button class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center shadow-sm">
-                                <i data-lucide="upload" class="w-4 h-4 mr-1.5"></i>上传数据
+                <div class="bg-white rounded-lg shadow-sm border border-slate-100 flex-1 p-5 flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-4">
+                        <h2 class="text-lg font-bold text-slate-800">日志管理</h2>
+                        <div class="flex items-center space-x-3">
+                            <button ng-click="$ctrl.batchExport()" class="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="download" class="w-4 h-4 mr-1"></i> 导出日志
                             </button>
-                            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center shadow-sm">
-                                <i data-lucide="trash-2" class="w-4 h-4 mr-1.5"></i>删除数据
-                            </button>
-                            <button class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center shadow-sm">
-                                <i data-lucide="play-circle" class="w-4 h-4 mr-1.5"></i>开放鉴定
+                            <button ng-click="$ctrl.clearLogs()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 px-4 py-2 rounded-md text-sm transition-colors flex items-center">
+                                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> 清空日志
                             </button>
                         </div>
+                    </div>
+                    
+                    <!-- 筛选区域 -->
+                    <div class="mb-4 flex space-x-4 bg-slate-50 p-3 rounded-md border border-slate-100">
+                        <div class="flex-1 max-w-xs">
+                            <input type="text" ng-model="$ctrl.filter.operator" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm" placeholder="按操作人筛选">
+                        </div>
+                        <div class="flex-1 max-w-xs">
+                            <select ng-model="$ctrl.filter.module" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                                <option value="">全部模块</option>
+                                <option value="系统登录">系统登录</option>
+                                <option value="用户管理">用户管理</option>
+                                <option value="鉴定任务">鉴定任务</option>
+                                <option value="全宗配置">全宗配置</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 max-w-xs">
+                            <input type="date" ng-model="$ctrl.filter.date" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                        </div>
+                        <button ng-click="$ctrl.applyFilter()" class="bg-primary hover:bg-sky-800 text-white px-4 py-2 rounded-md text-sm transition-colors">查询</button>
+                        <button ng-click="$ctrl.resetFilter()" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-md text-sm transition-colors">重置</button>
+                    </div>
 
-                        <!-- 数据表格区 -->
-                        <div class="bg-white border border-slate-200 rounded-md overflow-hidden flex-1 flex flex-col">
-                            <div class="overflow-x-auto flex-1">
-                                <table class="w-full text-left text-sm whitespace-nowrap">
-                                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0 z-10">
-                                        <tr>
-                                            <th class="px-4 py-3 font-medium w-12 text-center">
-                                                <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" />
-                                            </th>
-                                            <th class="px-4 py-3 font-medium w-16">序号</th>
-                                            <th class="px-4 py-3 font-medium">全宗号</th>
-                                            <th class="px-4 py-3 font-medium">档号</th>
-                                            <th class="px-4 py-3 font-medium">文件题名</th>
-                                            <th class="px-4 py-3 font-medium">责任者</th>
-                                            <th class="px-4 py-3 font-medium">保管期限</th>
-                                            <th class="px-4 py-3 font-medium">成文日期</th>
-                                            <th class="px-4 py-3 font-medium">AI鉴定结果</th>
-                                            <th class="px-4 py-3 font-medium">人工复核结果</th>
-                                            <th class="px-4 py-3 font-medium text-center">操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        <tr ng-repeat="item in $ctrl.paginatedList" class="hover:bg-slate-50 transition-colors">
-                                            <td class="px-4 py-3 text-center">
-                                                <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" />
-                                            </td>
-                                            <td class="px-4 py-3 text-slate-500">{{($ctrl.currentPage - 1) * $ctrl.pageSize + $index + 1}}</td>
-                                            <td class="px-4 py-3 text-slate-600">{{item.fondsCode}}</td>
-                                            <td class="px-4 py-3 text-slate-800 font-medium">{{item.archiveCode}}</td>
-                                            <td class="px-4 py-3 text-slate-800">{{item.title}}</td>
-                                            <td class="px-4 py-3 text-slate-600">{{item.responsible}}</td>
-                                            <td class="px-4 py-3 text-slate-600">{{item.retention}}</td>
-                                            <td class="px-4 py-3 text-slate-600">{{item.date}}</td>
-                                            <td class="px-4 py-3">
-                                                <span class="px-2 py-1 rounded-full text-xs font-medium" 
-                                                      ng-class="item.aiResult === '开放' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
-                                                    {{item.aiResult}}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3">
-                                                <span class="px-2 py-1 rounded-full text-xs font-medium" 
-                                                      ng-class="item.manualResult === '开放' ? 'bg-emerald-100 text-emerald-700' : (item.manualResult === '控制' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600')">
-                                                    {{item.manualResult || '待复核'}}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3 text-center">
-                                                <button ng-click="$ctrl.viewDetail(item)" class="text-primary hover:text-sky-700 transition-colors focus:outline-none" title="查看">
-                                                    <i data-lucide="eye" class="w-4 h-4 mx-auto"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr ng-if="!$ctrl.dataList || $ctrl.dataList.length === 0">
-                                            <td colspan="11" class="px-4 py-8 text-center text-slate-500">
-                                                <div class="flex flex-col items-center justify-center">
-                                                    <i data-lucide="inbox" class="w-10 h-10 text-slate-300 mb-2"></i>
-                                                    <p>暂无数据</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <!-- 分页 -->
-                            <div class="border-t border-slate-200 px-4 py-3 flex items-center justify-between bg-slate-50">
-                                <div class="text-sm text-slate-500">
-                                    共 {{$ctrl.totalItems || 0}} 条记录
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <button ng-click="$ctrl.prevPage()" ng-disabled="$ctrl.currentPage === 1" class="px-3 py-1 border border-slate-300 rounded text-sm bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">上一页</button>
-                                    <span class="text-sm text-slate-600 px-2">{{$ctrl.currentPage}} / {{$ctrl.totalPages}}</span>
-                                    <button ng-click="$ctrl.nextPage()" ng-disabled="$ctrl.currentPage === $ctrl.totalPages" class="px-3 py-1 border border-slate-300 rounded text-sm bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">下一页</button>
-                                </div>
-                            </div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                                    <th class="px-4 py-3 font-medium w-16">序号</th>
+                                    <th class="px-4 py-3 font-medium">操作模块</th>
+                                    <th class="px-4 py-3 font-medium">操作类型</th>
+                                    <th class="px-4 py-3 font-medium">操作内容</th>
+                                    <th class="px-4 py-3 font-medium">操作人</th>
+                                    <th class="px-4 py-3 font-medium">IP地址</th>
+                                    <th class="px-4 py-3 font-medium">操作时间</th>
+                                    <th class="px-4 py-3 font-medium">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in $ctrl.displayedList" class="border-b border-slate-100 hover:bg-slate-50 transition-colors text-sm">
+                                    <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
+                                    <td class="px-4 py-3 text-slate-800 font-medium">{{item.module}}</td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.actionType}}</td>
+                                    <td class="px-4 py-3 text-slate-600 max-w-xs truncate" title="{{item.content}}">{{item.content}}</td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.operator}}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{item.ip}}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{item.time}}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 rounded-full text-xs" 
+                                              ng-class="{'bg-emerald-100 text-emerald-700': item.status === '成功', 'bg-red-100 text-red-700': item.status === '失败'}">
+                                            {{item.status}}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr ng-if="$ctrl.displayedList.length === 0">
+                                    <td colspan="8" class="px-4 py-8 text-center text-slate-500">暂无数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                        <div class="text-sm text-slate-500">
+                            共 <span class="font-medium text-slate-700">{{$ctrl.totalItems}}</span> 条记录
+                        </div>
+                        <div class="flex space-x-1">
+                            <button class="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">上一页</button>
+                            <button class="px-3 py-1 border border-primary bg-primary text-white rounded text-sm">1</button>
+                            <button class="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">下一页</button>
                         </div>
                     </div>
                 </div>
             `,
-            controller: ['IconService', '$timeout', function(IconService, $timeout) {
+            controller: ['$timeout', function($timeout) {
+                /**
+                 * 日志管理控制器
+                 * 负责处理日志列表的展示、筛选、导出及清空等业务逻辑
+                 */
                 var ctrl = this;
                 
+                // 初始化筛选条件对象
+                ctrl.filter = { operator: '', module: '', date: '' };
+                
+                // 模拟的日志数据列表，实际应从后端获取
+                var mockData = [
+                    { id: 1, module: '系统登录', actionType: '登录', content: '用户 admin 登录系统', operator: 'admin', ip: '192.168.1.100', time: '2026-04-17 09:30:15', status: '成功' },
+                    { id: 2, module: '用户管理', actionType: '新增', content: '新增用户 zhangsan', operator: 'admin', ip: '192.168.1.100', time: '2026-04-17 10:05:22', status: '成功' },
+                    { id: 3, module: '鉴定任务', actionType: '修改', content: '修改任务 A全宗鉴定任务', operator: 'zhangsan', ip: '192.168.1.105', time: '2026-04-17 11:20:45', status: '成功' },
+                    { id: 4, module: '系统登录', actionType: '登录', content: '用户 lisi 登录失败，密码错误', operator: 'lisi', ip: '192.168.1.110', time: '2026-04-17 13:15:10', status: '失败' },
+                    { id: 5, module: '全宗配置', actionType: '删除', content: '删除全宗 C全宗', operator: 'admin', ip: '192.168.1.100', time: '2026-04-17 14:40:05', status: '成功' }
+                ];
+                
+                // 原始数据列表
+                ctrl.list = mockData;
+                // 界面显示的列表，通过拷贝避免污染原始数据
+                ctrl.displayedList = angular.copy(ctrl.list);
+                // 总记录数，用于分页显示
+                ctrl.totalItems = ctrl.displayedList.length;
+                
+                /**
+                 * 应用筛选条件
+                 * 遍历数据列表，根据操作人、模块、日期进行匹配筛选
+                 */
+                ctrl.applyFilter = function() {
+                    ctrl.displayedList = ctrl.list.filter(function(item) {
+                        // 匹配操作人
+                        var matchOp = !ctrl.filter.operator || item.operator.indexOf(ctrl.filter.operator) !== -1;
+                        // 匹配操作模块
+                        var matchMod = !ctrl.filter.module || item.module === ctrl.filter.module;
+                        // 匹配操作日期
+                        var matchDate = !ctrl.filter.date || item.time.indexOf(ctrl.filter.date) !== -1;
+                        return matchOp && matchMod && matchDate;
+                    });
+                    // 更新总记录数
+                    ctrl.totalItems = ctrl.displayedList.length;
+                };
+                
+                /**
+                 * 重置筛选条件
+                 * 清空筛选表单并将显示列表恢复为完整数据
+                 */
+                ctrl.resetFilter = function() {
+                    ctrl.filter = { operator: '', module: '', date: '' };
+                    ctrl.displayedList = angular.copy(ctrl.list);
+                    ctrl.totalItems = ctrl.displayedList.length;
+                };
+                
+                /**
+                 * 批量导出日志
+                 * 目前为模拟功能，实际应请求后端接口下载文件
+                 */
+                ctrl.batchExport = function() {
+                    alert('导出日志功能开发中');
+                };
+                
+                /**
+                 * 清空所有日志
+                 * 弹出确认框，用户确认后清空列表数据
+                 */
+                ctrl.clearLogs = function() {
+                    if (confirm('确定要清空所有日志吗？清空后不可恢复！')) {
+                        ctrl.list = [];
+                        ctrl.displayedList = [];
+                        ctrl.totalItems = 0;
+                        alert('日志已清空');
+                    }
+                };
+
+                /**
+                 * 组件初始化生命周期钩子
+                 * 延迟渲染图标，确保DOM节点加载完毕
+                 */
                 ctrl.$onInit = function() {
-                    // Try to load task from localStorage
-                    var storedTask = localStorage.getItem('oaas_current_task');
-                    if (storedTask) {
-                        try {
-                            ctrl.task = JSON.parse(storedTask);
-                            // Assign some default mock values if not present
-                            ctrl.task.fondsCode = ctrl.task.fondsCode || '101';
-                            ctrl.task.fondsName = ctrl.task.fondsName || '测试全宗';
-                            ctrl.task.year = ctrl.task.year || '2023';
-                            ctrl.task.category = ctrl.task.category || '文书档案';
-                        } catch(e) {
-                            console.error('Failed to parse stored task', e);
-                            ctrl.task = {
-                                title: '未知任务',
-                                fondsCode: '101',
-                                fondsName: '测试全宗',
-                                year: '2023',
-                                category: '文书档案',
-                                total: 0,
-                                opened: 0,
-                                checked: 0
-                            };
-                        }
-                    } else {
-                        ctrl.task = {
-                            title: '未知任务',
-                            fondsCode: '101',
-                            fondsName: '测试全宗',
-                            year: '2023',
-                            category: '文书档案',
-                            total: 0,
-                            opened: 0,
-                            checked: 0
-                        };
-                    }
-
-                    // Mock data list
-                    ctrl.dataList = [];
-                    var responsibles = ['办公室', '人事处', '财务处', '保卫处', '审计处'];
-                    var retentions = ['永久', '30年', '10年'];
-                    var results = ['开放', '控制', '待复核'];
-                    
-                    // 生成 40 条数据（2页）
-                    for (var i = 1; i <= 40; i++) {
-                        var day = (i < 10 ? '0' + i : (i > 28 ? 28 : i));
-                        var aiRes = results[i % 2];
-                        var manRes = results[i % 3];
-                        
-                        ctrl.dataList.push({
-                            fondsCode: ctrl.task.fondsCode,
-                            archiveCode: ctrl.task.fondsCode + '-' + ctrl.task.year + '-WS-' + (1000 + i).toString().substring(1),
-                            title: '2023年度第' + i + '项工作执行报告',
-                            responsible: responsibles[i % 5],
-                            retention: retentions[i % 3],
-                            date: ctrl.task.year + '-05-' + day,
-                            aiResult: aiRes,
-                            manualResult: (i % 4 === 0) ? '待复核' : manRes
-                        });
-                    }
-                    
-                    ctrl.totalItems = ctrl.dataList.length;
-                    ctrl.currentPage = 1;
-                    ctrl.pageSize = 20;
-                    ctrl.totalPages = Math.ceil(ctrl.totalItems / ctrl.pageSize) || 1;
-                    
-                    ctrl.updatePagination = function() {
-                        var start = (ctrl.currentPage - 1) * ctrl.pageSize;
-                        var end = start + ctrl.pageSize;
-                        ctrl.paginatedList = ctrl.dataList.slice(start, end);
-                        $timeout(function() { IconService.refresh(); }, 0, false);
-                    };
-                    
-                    ctrl.prevPage = function() {
-                        if (ctrl.currentPage > 1) {
-                            ctrl.currentPage--;
-                            ctrl.updatePagination();
-                        }
-                    };
-                    
-                    ctrl.nextPage = function() {
-                        if (ctrl.currentPage < ctrl.totalPages) {
-                            ctrl.currentPage++;
-                            ctrl.updatePagination();
-                        }
-                    };
-
-                    ctrl.viewDetail = function(item) {
-                        localStorage.setItem('oaas_current_document', JSON.stringify(item));
-                        window.open('appraisal-detail.html', '_blank');
-                    };
-
-                    ctrl.updatePagination();
+                    $timeout(function() {
+                        if (window.lucide) { lucide.createIcons(); }
+                    }, 0);
                 };
             }]
         });

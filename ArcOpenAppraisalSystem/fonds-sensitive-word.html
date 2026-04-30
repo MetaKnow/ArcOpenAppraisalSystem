@@ -56,13 +56,32 @@
 
         // 模拟全局状态服务（用于跨页面传递敏感类型和全宗配置，实际应由后端接口提供）
         app.factory('ConfigService', function() {
+            var defaultTypes = [
+                { id: 1, name: '通用敏感规则', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 2, name: '政治类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 3, name: '民族宗教类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 4, name: '涉外类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 5, name: '历史类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 6, name: '国土类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 7, name: '文化类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 8, name: '军事类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 9, name: '经济类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 10, name: '国家安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 11, name: '干部人事类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 12, name: '司法执法类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 13, name: '纪检监察类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 14, name: '科技类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 15, name: '公共安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 16, name: '个人信息类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 17, name: '数据安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                { id: 18, name: '开放规则', controlFlag: '开放', createdAt: '2025-10-01 10:00:00', selected: false }
+            ];
+            var storedTypes = localStorage.getItem('oaas_sensitive_types');
+            var sensitiveTypes = storedTypes ? JSON.parse(storedTypes) : defaultTypes;
+            
             return {
-                sensitiveTypes: [
-                    { id: 1, name: '个人隐私', controlFlag: '受控' },
-                    { id: 2, name: '国家秘密', controlFlag: '受控' },
-                    { id: 3, name: '商业秘密', controlFlag: '受控' },
-                    { id: 4, name: '普通公开', controlFlag: '开放' }
-                ],
+                sensitiveTypes: sensitiveTypes,
+
                 fondsList: [
                     { id: 1, fondsNo: 'J001', fondsName: '市政府办公厅' },
                     { id: 2, fondsNo: 'J002', fondsName: '市发改委' },
@@ -155,7 +174,7 @@
                     { name: '工作台' },
                     { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
                     { name: '鉴定任务管理' },
-                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置', '日志管理'] }
                 ];
                 
                 ctrl.filteredMenuItems = [];
@@ -246,6 +265,8 @@
                         '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html',
                         '任务审核': 'appraisal-task-audit.html'
+                    ,
+                        '日志管理': 'log-management.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -346,6 +367,8 @@
                     '修改任务': 'appraisal-task-edit.html',
                     '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html'
+                ,
+                    '日志管理': 'log-management.html'
                 };
                 
                 var nameMap = {};
@@ -540,10 +563,10 @@
                                         <input type="checkbox" ng-model="$ctrl.selectAll" ng-change="$ctrl.toggleAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
                                     </th>
                                     <th class="px-4 py-3 font-medium w-16">序号</th>
-                                    <th class="px-4 py-3 font-medium">敏感词</th>
-                                    <th class="px-4 py-3 font-medium">同义词</th>
+                                    <th class="px-4 py-3 font-medium">词库标题</th>
+                                    <th class="px-4 py-3 font-medium">敏感词及同义词</th>
                                     <th class="px-4 py-3 font-medium">敏感类型</th>
-                                    <th class="px-4 py-3 font-medium">所属全宗</th>
+                                    <th class="px-4 py-3 font-medium">全宗名称</th>
                                     <th class="px-4 py-3 font-medium">控制标识</th>
                                     <th class="px-4 py-3 font-medium">创建时间</th>
                                     <th class="px-4 py-3 font-medium">是否启用</th>
@@ -556,8 +579,8 @@
                                         <input type="checkbox" ng-model="item.selected" ng-change="$ctrl.updateSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary cursor-pointer w-4 h-4">
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{$index + 1}}</td>
-                                    <td class="px-4 py-3 text-slate-800 break-all max-w-xs">{{item.words}}</td>
-                                    <td class="px-4 py-3 text-slate-800 break-all max-w-xs">{{item.synonyms || '-'}}</td>
+                                    <td class="px-4 py-3 text-slate-800">{{item.title}}</td>
+                                    <td class="px-4 py-3 text-slate-800 truncate max-w-xs" title="{{item.words}}">{{item.words}}</td>
                                     <td class="px-4 py-3 text-slate-800">{{item.type.name}}</td>
                                     <td class="px-4 py-3 text-slate-800">{{item.fonds.fondsName}}</td>
                                     <td class="px-4 py-3">
@@ -593,12 +616,12 @@
                             </div>
                             <div class="p-6 space-y-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感词 <span class="text-red-500">*</span></label>
-                                    <textarea ng-model="$ctrl.formData.words" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="多个敏感词用英文,隔开"></textarea>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">词库标题 <span class="text-red-500">*</span></label>
+                                    <input type="text" ng-model="$ctrl.formData.title" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="请输入词库标题">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">同义词</label>
-                                    <textarea ng-model="$ctrl.formData.synonyms" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="格式：敏感词-同义词1,同义词2; 下一个敏感词-同义词1,同义词2;"></textarea>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">敏感词及同义词 <span class="text-red-500">*</span></label>
+                                    <textarea ng-model="$ctrl.formData.words" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-y" placeholder="多个敏感词用英文,隔开。格式：敏感词-同义词1,同义词2; 下一个敏感词-同义词1,同义词2;"></textarea>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
@@ -641,6 +664,101 @@
                 // 获取敏感类型和全宗选项数据 (全宗数据从 localStorage 获取，保持同步)
                 ctrl.sensitiveTypes = ConfigService.sensitiveTypes;
                 
+                /**
+                 * 根据全宗信息生成默认词库标题。
+                 * @param {Object} fonds 全宗对象。
+                 * @returns {string} 默认词库标题。
+                 */
+                function buildDefaultTitle(fonds) {
+                    // 优先使用全宗名称拼接标题，保证全宗敏感词库与通用敏感词库字段结构一致。
+                    if (fonds && fonds.fondsName) {
+                        return fonds.fondsName + '敏感词库';
+                    }
+                    // 当全宗信息缺失时，回退为通用标题，避免页面出现空值。
+                    return '全宗敏感词库';
+                }
+                
+                /**
+                 * 规范化单条全宗敏感词数据。
+                 * @param {Object} item 原始数据项。
+                 * @returns {{item: Object, changed: boolean}} 规范化结果与是否发生变更。
+                 */
+                function normalizeWordItem(item) {
+                    // 使用深拷贝避免直接修改原始对象，降低兼容处理带来的副作用。
+                    var normalizedItem = angular.copy(item || {});
+                    var changed = false;
+                    var matchedType;
+                    var matchedFonds;
+                    
+                    // 将敏感类型重新映射到最新配置对象，保证列表展示和表单回填使用同一引用。
+                    if (normalizedItem.type && normalizedItem.type.id !== undefined) {
+                        matchedType = ctrl.sensitiveTypes.find(function(type) {
+                            return type.id === normalizedItem.type.id;
+                        });
+                    }
+                    if (!matchedType) {
+                        matchedType = ctrl.sensitiveTypes[0];
+                    }
+                    if (normalizedItem.type !== matchedType) {
+                        normalizedItem.type = matchedType;
+                        changed = true;
+                    }
+                    
+                    // 将所属全宗重新映射到最新全宗配置，保证全宗名称展示与下拉框选项一致。
+                    if (normalizedItem.fonds && normalizedItem.fonds.id !== undefined) {
+                        matchedFonds = ctrl.fondsList.find(function(fonds) {
+                            return fonds.id === normalizedItem.fonds.id;
+                        });
+                    }
+                    if (!matchedFonds) {
+                        matchedFonds = ctrl.fondsList[0];
+                    }
+                    if (normalizedItem.fonds !== matchedFonds) {
+                        normalizedItem.fonds = matchedFonds;
+                        changed = true;
+                    }
+                    
+                    // 旧数据中同义词独立存储，这里迁移为“敏感词及同义词”统一字段。
+                    if (normalizedItem.synonyms) {
+                        normalizedItem.words = normalizedItem.synonyms;
+                        delete normalizedItem.synonyms;
+                        changed = true;
+                    }
+                    
+                    // 兼容旧版本未维护标题字段的情况，自动补齐默认词库标题。
+                    if (!normalizedItem.title) {
+                        normalizedItem.title = buildDefaultTitle(normalizedItem.fonds);
+                        changed = true;
+                    }
+                    
+                    return {
+                        item: normalizedItem,
+                        changed: changed
+                    };
+                }
+                
+                /**
+                 * 规范化全宗敏感词列表数据。
+                 * @param {Array} list 原始列表数据。
+                 * @returns {{list: Array, changed: boolean}} 规范化后的列表与是否发生变更。
+                 */
+                function normalizeWordList(list) {
+                    // 遍历列表逐条迁移旧结构，统一页面展示与保存格式。
+                    var changed = false;
+                    var normalizedList = (list || []).map(function(item) {
+                        var result = normalizeWordItem(item);
+                        if (result.changed) {
+                            changed = true;
+                        }
+                        return result.item;
+                    });
+                    
+                    return {
+                        list: normalizedList,
+                        changed: changed
+                    };
+                }
+                
                 var storedFonds = localStorage.getItem('oaas_fonds_list');
                 if (storedFonds) {
                     try {
@@ -655,29 +773,21 @@
                 var storedWords = localStorage.getItem('oaas_fonds_sensitive_words');
                 if (storedWords) {
                     try {
-                        ctrl.list = JSON.parse(storedWords);
-                        var needSave = false;
-                        ctrl.list.forEach(function(item) {
-                            if (item.synonyms === undefined) {
-                                needSave = true;
-                                if (item.id === 1) item.synonyms = '市长信箱-群众来信;信访记录-信访件;';
-                                else if (item.id === 2) item.synonyms = '内部考核-绩效考核;项目评估-评估报告;';
-                                else item.synonyms = '';
-                            }
-                        });
-                        if (needSave) {
+                        var normalizedStoredResult = normalizeWordList(JSON.parse(storedWords));
+                        ctrl.list = normalizedStoredResult.list;
+                        if (normalizedStoredResult.changed) {
                             localStorage.setItem('oaas_fonds_sensitive_words', JSON.stringify(ctrl.list));
                         }
                     } catch(e) {
                         ctrl.list = [
-                            { id: 1, words: '市长信箱,信访记录', synonyms: '市长信箱-群众来信;信访记录-信访件;', type: ctrl.sensitiveTypes[0], fonds: ctrl.fondsList[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
-                            { id: 2, words: '内部考核,项目评估', synonyms: '内部考核-绩效考核;项目评估-评估报告;', type: ctrl.sensitiveTypes[2], fonds: ctrl.fondsList[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
+                            { id: 1, title: buildDefaultTitle(ctrl.fondsList[0]), words: '市长信箱-群众来信; 信访记录-信访件;', type: ctrl.sensitiveTypes[0], fonds: ctrl.fondsList[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                            { id: 2, title: buildDefaultTitle(ctrl.fondsList[1]), words: '内部考核-绩效考核; 项目评估-评估报告;', type: ctrl.sensitiveTypes[2], fonds: ctrl.fondsList[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
                         ];
                     }
                 } else {
                     ctrl.list = [
-                        { id: 1, words: '市长信箱,信访记录', synonyms: '市长信箱-群众来信;信访记录-信访件;', type: ctrl.sensitiveTypes[0], fonds: ctrl.fondsList[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
-                        { id: 2, words: '内部考核,项目评估', synonyms: '内部考核-绩效考核;项目评估-评估报告;', type: ctrl.sensitiveTypes[2], fonds: ctrl.fondsList[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
+                        { id: 1, title: buildDefaultTitle(ctrl.fondsList[0]), words: '市长信箱-群众来信; 信访记录-信访件;', type: ctrl.sensitiveTypes[0], fonds: ctrl.fondsList[0], createdAt: '2023-10-01 10:15:00', enabled: true, selected: false },
+                        { id: 2, title: buildDefaultTitle(ctrl.fondsList[1]), words: '内部考核-绩效考核; 项目评估-评估报告;', type: ctrl.sensitiveTypes[2], fonds: ctrl.fondsList[1], createdAt: '2023-10-02 14:20:00', enabled: true, selected: false }
                     ];
                     localStorage.setItem('oaas_fonds_sensitive_words', JSON.stringify(ctrl.list));
                 }
@@ -776,8 +886,12 @@
                 };
 
                 ctrl.saveForm = function() {
+                    if (!ctrl.formData.title) {
+                        alert('请输入词库标题');
+                        return;
+                    }
                     if (!ctrl.formData.words) {
-                        alert('请输入敏感词');
+                        alert('请输入敏感词及同义词');
                         return;
                     }
                     if (!ctrl.formData.fonds) {

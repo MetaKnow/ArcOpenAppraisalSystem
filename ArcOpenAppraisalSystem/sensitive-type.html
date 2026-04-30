@@ -137,7 +137,7 @@
                     { name: '工作台' },
                     { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
                     { name: '鉴定任务管理' },
-                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置', '日志管理'] }
                 ];
                 
                 ctrl.filteredMenuItems = [];
@@ -228,6 +228,8 @@
                         '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html',
                         '任务审核': 'appraisal-task-audit.html'
+                    ,
+                        '日志管理': 'log-management.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -328,6 +330,8 @@
                     '修改任务': 'appraisal-task-edit.html',
                     '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html'
+                ,
+                    '日志管理': 'log-management.html'
                 };
                 
                 var nameMap = {};
@@ -584,12 +588,42 @@
             controller: ['IconService', '$timeout', function(IconService, $timeout) {
                 var ctrl = this;
                 
-                ctrl.list = [
-                    { id: 1, name: '个人隐私', controlFlag: '受控', createdAt: '2023-10-01 10:00:00', selected: false },
-                    { id: 2, name: '国家秘密', controlFlag: '受控', createdAt: '2023-10-02 11:30:00', selected: false },
-                    { id: 3, name: '商业秘密', controlFlag: '受控', createdAt: '2023-10-03 14:15:00', selected: false },
-                    { id: 4, name: '普通公开', controlFlag: '开放', createdAt: '2023-10-04 09:20:00', selected: false }
+                var defaultList = [
+                    { id: 1, name: '通用敏感规则', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 2, name: '政治类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 3, name: '民族宗教类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 4, name: '涉外类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 5, name: '历史类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 6, name: '国土类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 7, name: '文化类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 8, name: '军事类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 9, name: '经济类档案', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 10, name: '国家安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 11, name: '干部人事类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 12, name: '司法执法类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 13, name: '纪检监察类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 14, name: '科技类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 15, name: '公共安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 16, name: '个人信息类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 17, name: '数据安全类', controlFlag: '受控', createdAt: '2025-10-01 10:00:00', selected: false },
+                    { id: 18, name: '开放规则', controlFlag: '开放', createdAt: '2025-10-01 10:00:00', selected: false }
                 ];
+
+                var storedTypes = localStorage.getItem('oaas_sensitive_types');
+                if (storedTypes) {
+                    try {
+                        ctrl.list = JSON.parse(storedTypes);
+                    } catch(e) {
+                        ctrl.list = defaultList;
+                    }
+                } else {
+                    ctrl.list = defaultList;
+                    localStorage.setItem('oaas_sensitive_types', JSON.stringify(ctrl.list));
+                }
+
+                ctrl.saveData = function() {
+                    localStorage.setItem('oaas_sensitive_types', JSON.stringify(ctrl.list));
+                };
 
                 ctrl.showForm = false;
                 ctrl.isEdit = false;
@@ -643,6 +677,7 @@
                     if (confirm('确定要删除选中的 ' + selectedItems.length + ' 项敏感类型吗？')) {
                         ctrl.list = ctrl.list.filter(function(item) { return !item.selected; });
                         ctrl.selectAll = false;
+                        ctrl.saveData();
                         IconService.refresh();
                     }
                 };
@@ -666,6 +701,7 @@
                         var index = ctrl.list.findIndex(function(i) { return i.id === item.id; });
                         if (index > -1) {
                             ctrl.list.splice(index, 1);
+                            ctrl.saveData();
                         }
                     }
                 };
@@ -694,6 +730,7 @@
                         
                         ctrl.list.push(angular.copy(ctrl.formData));
                     }
+                    ctrl.saveData();
                     ctrl.showForm = false;
                     IconService.refresh();
                 };

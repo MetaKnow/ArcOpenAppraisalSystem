@@ -228,7 +228,7 @@
                     { name: '工作台' },
                     { name: '鉴定规则配置', children: ['敏感类型管理', '敏感内容管理', '通用敏感词库', '全宗敏感词库', '错检漏检库'] },
                     { name: '鉴定任务管理' },
-                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置'] }
+                    { name: '系统管理', children: ['全宗配置', '用户管理', '角色权限', '元数据配置', '鉴定流程配置', '系统参数配置', '日志管理'] }
                 ];
                 
                 ctrl.filteredMenuItems = [];
@@ -319,6 +319,8 @@
                         '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html',
                         '任务审核': 'appraisal-task-audit.html'
+                    ,
+                        '日志管理': 'log-management.html'
                     };
                     var currentPath = 'index.html';
                     var href = window.location.href;
@@ -419,6 +421,8 @@
                     '修改任务': 'appraisal-task-edit.html',
                     '元数据配置': 'metadata-config.html',
                         '鉴定流程配置': 'appraisal-process-config.html'
+                ,
+                    '日志管理': 'log-management.html'
                 };
                 
                 var nameMap = {};
@@ -636,8 +640,8 @@
                         </button>
                     </div>
                     
-                    <div class="flex-1 overflow-auto bg-slate-50/50 border border-slate-200 rounded-md">
-                        <table class="w-full text-sm text-left min-w-[800px]">
+                    <div class="flex-1 overflow-x-auto bg-slate-50/50 border border-slate-200 rounded-md">
+                        <table class="w-full text-sm text-left min-w-[1000px]">
                             <thead class="text-xs text-slate-600 bg-slate-100 sticky top-0 z-10 shadow-sm">
                                 <tr>
                                     <th class="px-4 py-3 font-medium whitespace-nowrap">序号</th>
@@ -648,6 +652,8 @@
                                     <th class="px-4 py-3 font-medium whitespace-nowrap">保管期限</th>
                                     <th class="px-4 py-3 font-medium whitespace-nowrap">成文日期</th>
                                     <th class="px-4 py-3 font-medium whitespace-nowrap">AI鉴定结果</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">人工复核结果</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap text-center">操作</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 bg-white">
@@ -663,6 +669,16 @@
                                         <span class="px-2 py-1 text-xs rounded-md" ng-class="{'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-600/20': item.aiResult === '开放', 'bg-red-50 text-red-600 ring-1 ring-red-600/20': item.aiResult === '受控'}">
                                             {{item.aiResult}}
                                         </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 text-xs rounded-md" ng-class="{'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-600/20': item.manualResult === '开放', 'bg-red-50 text-red-600 ring-1 ring-red-600/20': item.manualResult === '受控', 'bg-slate-50 text-slate-600 ring-1 ring-slate-600/20': item.manualResult === '待复核'}">
+                                            {{item.manualResult}}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button ng-click="$ctrl.viewDocument(item)" class="text-primary hover:text-sky-700 transition-colors" title="查看">
+                                            <i data-lucide="eye" class="w-4 h-4 mx-auto"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -745,6 +761,10 @@
                     ctrl.mockData = [];
                     for (var j = 1; j <= 20; j++) {
                         var isControlled = (j % 3 === 0);
+                        var manResult = '待复核';
+                        if (j % 4 === 1) { manResult = '开放'; }
+                        else if (j % 4 === 2) { manResult = '受控'; }
+                        
                         ctrl.mockData.push({
                             fondsNo: 'J' + (100 + (j % 5)),
                             archiveNo: 'J100-2023-00' + j,
@@ -752,7 +772,8 @@
                             creator: '市政府办公厅',
                             retentionPeriod: j % 2 === 0 ? '永久' : '30年',
                             creationDate: '2023-0' + (j % 9 + 1) + '-1' + (j % 9),
-                            aiResult: isControlled ? '受控' : '开放'
+                            aiResult: isControlled ? '受控' : '开放',
+                            manualResult: manResult
                         });
                     }
 
@@ -761,6 +782,11 @@
                 
                 ctrl.goBack = function() {
                     window.location.href = 'appraisal-task.html';
+                };
+
+                ctrl.viewDocument = function(item) {
+                    localStorage.setItem('oaas_current_document', JSON.stringify(item));
+                    window.open('appraisal-detail.html', '_blank');
                 };
             }]
         });

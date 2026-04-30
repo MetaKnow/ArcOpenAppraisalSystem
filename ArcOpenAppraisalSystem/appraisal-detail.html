@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN" ng-app="appraisalApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-OAAS档案开放鉴定系统 - 鉴定详情</title>
+    <!-- 引入 Tailwind CSS 进行样式管理 -->
+    <script src="./lib/tailwindcss.js"></script>
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0369A1', // 政务风主色
+                        secondary: '#334155',
+                        background: '#F8FAFC',
+                        surface: '#ffffff',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 引入 AngularJS -->
+    <script src="./lib/angular.min.js"></script>
+    <!-- 引入 Lucide 图标库 -->
+    <script src="./lib/lucide.min.js"></script>
+    <link rel="stylesheet" href="./main.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        .pdf-viewer-bg {
+            background-color: #e5e7eb;
+        }
+    </style>
+</head>
+<body ng-controller="DetailController as ctrl" class="h-screen overflow-hidden flex flex-col bg-slate-50">
+    
+    <!-- 顶部头部信息 -->
+    <header class="bg-white border-b border-slate-200 shrink-0">
+        <div class="px-3 py-1.5 flex items-start justify-between">
+            <div class="flex-1 flex flex-col justify-center">
+                <div class="flex items-center space-x-2 mb-1">
+                    <span class="border px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 leading-none" 
+                          ng-class="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'">
+                        已鉴定
+                    </span>
+                    <h1 class="text-base font-bold text-slate-800 leading-tight truncate">{{ctrl.document.title}}</h1>
+                </div>
+                <div class="flex flex-wrap items-center text-[14px] text-slate-500 gap-x-4 gap-y-0.5 leading-tight">
+                    <span>档号: <span class="text-slate-700">{{ctrl.document.archiveCode || ctrl.document.archiveNo || '-'}}</span></span>
+                    <span>全宗号: <span class="text-slate-700">{{ctrl.document.fondsCode || ctrl.document.fondsNo || '-'}}</span></span>
+                    <span>所属门类: <span class="text-slate-700">{{ctrl.document.category || '-'}}</span></span>
+                    <span>年度: <span class="text-slate-700">{{ctrl.document.year || '-'}}</span></span>
+                    <span>责任者: <span class="text-slate-700">{{ctrl.document.responsible || ctrl.document.creator || '-'}}</span></span>
+                    <span>全宗名称: <span class="text-slate-700">{{ctrl.document.fondsName || '-'}}</span></span>
+                    <span>保管期限: <span class="text-slate-700">{{ctrl.document.retention || ctrl.document.retentionPeriod || '-'}}</span></span>
+                    <span>密级: <span class="text-slate-700">{{ctrl.document.security || '-'}}</span></span>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4 ml-3 shrink-0">
+                <!-- 控制印章 (长方形) -->
+                <div ng-if="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控'" class="relative px-3 py-0.5 border-2 border-red-600 text-red-600 rounded font-bold text-sm transform -rotate-12 opacity-80 shadow-sm">
+                    控制
+                </div>
+                <div ng-if="ctrl.document.aiResult === '开放'" class="relative px-3 py-0.5 border-2 border-emerald-600 text-emerald-600 rounded font-bold text-sm transform -rotate-12 opacity-80 shadow-sm">
+                    开放
+                </div>
+                
+                <button class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2" ng-click="ctrl.goBack()" title="返回">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <main class="flex-1 flex overflow-hidden">
+        <!-- 左侧文档查看器 -->
+        <div class="flex-1 flex border-r border-slate-200 pdf-viewer-bg">
+            <!-- 缩略图 -->
+            <div class="w-32 bg-white border-r border-slate-200 overflow-y-auto custom-scrollbar py-4 flex flex-col items-center space-y-4 shrink-0">
+                <div class="relative cursor-pointer group">
+                    <div class="w-24 h-32 bg-white border-2 border-primary shadow-sm flex items-center justify-center text-slate-300 relative">
+                        <span class="absolute top-1 left-1 text-xs font-bold text-slate-500 bg-white px-1">1</span>
+                        <div class="w-16 h-20 border border-slate-200 flex flex-col space-y-1 p-1">
+                            <div class="h-1 bg-slate-200 w-full"></div>
+                            <div class="h-1 bg-slate-200 w-3/4"></div>
+                            <div class="h-1 bg-slate-200 w-full"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative cursor-pointer group opacity-70 hover:opacity-100 transition-opacity">
+                    <div class="w-24 h-32 bg-white border border-slate-300 shadow-sm flex items-center justify-center text-slate-300 relative group-hover:border-slate-400">
+                        <span class="absolute top-1 left-1 text-xs font-bold text-slate-500 bg-white px-1">2</span>
+                        <div class="w-16 h-20 border border-slate-200 flex flex-col space-y-1 p-1">
+                            <div class="h-1 bg-slate-200 w-full"></div>
+                            <div class="h-1 bg-slate-200 w-full"></div>
+                            <div class="h-1 bg-slate-200 w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 单区域文档查看 -->
+            <div class="flex-1 flex flex-col overflow-hidden bg-slate-200 relative">
+                <!-- 文档操作工具栏 -->
+                <div class="bg-white border-b border-slate-200 h-8 flex items-center justify-center space-x-1 shrink-0 z-10 shadow-sm w-full px-2">
+                    <button class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-primary focus:outline-none transition-colors" title="放大">
+                        <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+                        <span class="text-xs font-medium">放大</span>
+                    </button>
+                    <button class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-primary focus:outline-none transition-colors" title="缩小">
+                        <i data-lucide="zoom-out" class="w-3.5 h-3.5"></i>
+                        <span class="text-xs font-medium">缩小</span>
+                    </button>
+                    <div class="w-px h-3 bg-slate-300 mx-1"></div>
+                    <button class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-primary focus:outline-none transition-colors" title="旋转">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                        <span class="text-xs font-medium">旋转</span>
+                    </button>
+                    <div class="w-px h-3 bg-slate-300 mx-1"></div>
+                    <button class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-primary focus:outline-none transition-colors" title="人工标注">
+                        <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
+                        <span class="text-xs font-medium">人工标注</span>
+                    </button>
+                </div>
+                
+                <iframe src="../docs/乘势而上 开拓进取 奋力做好“十五五”开局之年档案工作——在全国档案局长馆长会议上的报告.pdf#toolbar=0&navpanes=0&scrollbar=0" class="flex-1 w-full border-0" title="文档查看"></iframe>
+            </div>
+        </div>
+
+        <!-- 右侧鉴定结果面板 -->
+        <div class="w-[450px] bg-white flex flex-col shrink-0 relative shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
+            <!-- 一级标签页 -->
+            <div class="px-4 border-b border-slate-200 bg-slate-50/50">
+                <div class="flex space-x-6 text-sm font-medium text-slate-600">
+                    <button class="text-primary border-b-2 border-primary py-2.5 px-1 focus:outline-none">智能鉴定</button>
+                    <button class="hover:text-primary py-2.5 px-1 border-b-2 border-transparent focus:outline-none transition-colors">错检漏检</button>
+                    <button class="hover:text-primary py-2.5 px-1 border-b-2 border-transparent focus:outline-none transition-colors">审核记录</button>
+                </div>
+            </div>
+
+            <!-- 二级标签页 -->
+            <div class="px-4 border-b border-slate-200">
+                <div class="flex space-x-6 text-sm">
+                    <button
+                        ng-repeat="tab in ctrl.secondaryTabs track by tab.key"
+                        ng-click="ctrl.setActiveResultTab(tab.key)"
+                        ng-class="ctrl.getSecondaryTabClass(tab.key)"
+                        class="py-3 px-1 border-b-2 focus:outline-none transition-colors">
+                        {{tab.label}}({{ctrl.resultCounts[tab.key]}})
+                    </button>
+                </div>
+            </div>
+
+            <!-- 鉴定结果列表 -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 pb-32">
+                <div
+                    ng-repeat="item in ctrl.displayedResults track by item.id"
+                    class="border border-slate-200 rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="absolute left-0 top-0 bottom-0 w-1" ng-class="$index === 0 ? 'bg-primary' : 'bg-slate-300'"></div>
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="text-sm font-medium text-slate-800 leading-snug flex-1 pr-4 line-clamp-2">
+                            {{item.title}}
+                        </div>
+                        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-1.5 py-0.5 rounded">{{item.pageTag}}</span>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex" ng-if="item.generalMatchedTerms && item.generalMatchedTerms.length">
+                            <span class="text-slate-400 shrink-0 w-24">通用敏感词命中:</span>
+                            <div class="flex-1 flex flex-wrap gap-3">
+                                <div ng-repeat="term in item.generalMatchedTerms track by $index" class="flex flex-col items-start">
+                                    <span class="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 font-medium">
+                                        {{term.word}}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex" ng-if="item.fondsMatchedTerms && item.fondsMatchedTerms.length">
+                            <span class="text-slate-400 shrink-0 w-24">全宗敏感词命中:</span>
+                            <div class="flex-1 flex flex-wrap gap-3">
+                                <div ng-repeat="term in item.fondsMatchedTerms track by $index" class="flex flex-col items-start">
+                                    <span class="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700 font-medium">
+                                        {{term.word}}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex">
+                            <span class="text-slate-400 shrink-0 w-24">鉴定说明:</span>
+                            <span class="text-slate-600 truncate">{{item.description}}</span>
+                        </div>
+                        <div class="flex">
+                            <span class="text-slate-400 shrink-0 w-24">鉴定规则:</span>
+                            <div class="flex-1 text-red-500">
+                                <div ng-repeat="r in item.rules track by $index" class="truncate">{{r}}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center justify-end space-x-4 border-t border-slate-100 pt-2">
+                        <button class="flex items-center space-x-1 text-slate-500 hover:text-emerald-600 focus:outline-none transition-colors">
+                            <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                            <span class="text-xs">认可</span>
+                        </button>
+                        <button class="flex items-center space-x-1 text-slate-500 hover:text-red-600 focus:outline-none transition-colors">
+                            <i data-lucide="thumbs-down" class="w-4 h-4"></i>
+                            <span class="text-xs">不认可</span>
+                        </button>
+                        <button class="flex items-center space-x-1 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors">
+                            <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                            <span class="text-xs">更多</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部固定 AI 建议条 -->
+            <div class="absolute bottom-0 left-0 right-0 bg-blue-50/90 backdrop-blur-sm border-t border-blue-100 p-4 m-2 rounded-lg flex items-start space-x-3">
+                <div class="bg-blue-100 p-2 rounded-full text-primary shrink-0">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium text-slate-800 mb-1 flex items-center">
+                        经AI鉴定后建议：<span class="text-red-600 font-bold ml-1">控制</span>
+                    </div>
+                    <div class="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                        该档案内容涉及领导干部的党性党风教育整改措施，属于单位内部工作类档案中的工作报告相关材料，符合控制...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        var app = angular.module('appraisalApp', []);
+
+        // 重新渲染图标的服务
+        app.service('IconService', function($timeout) {
+            var refreshPromise;
+            this.refresh = function() {
+                if (refreshPromise) $timeout.cancel(refreshPromise);
+                refreshPromise = 
+                $timeout(function() {
+                    lucide.createIcons();
+                    refreshPromise = null;
+                }, 50, false);
+            };
+        });
+
+        app.controller('DetailController', ['IconService', function(IconService) {
+            var ctrl = this;
+
+            /**
+             * 初始化右侧结果标签页的静态示例数据。
+             * 这里同时维护目录敏感词命中、全文敏感词命中、全文敏感内容语义命中三组数据，
+             * 便于页面按二级标签进行切换展示，并在“全部”标签中汇总显示。
+             */
+            ctrl.initializeResultData = function() {
+                // 二级标签配置，key 与结果分组字段保持一致，便于统一切换与统计。
+                ctrl.secondaryTabs = [
+                    { key: 'all', label: '全部' },
+                    { key: 'catalog', label: '目录敏感词命中' },
+                    { key: 'fullText', label: '全文敏感词命中' },
+                    { key: 'semantic', label: '全文敏感内容语义命中' }
+                ];
+
+                // 目录字段命中示例数据，突出展示命中的敏感词以及所属词库来源。
+                ctrl.resultGroups = {
+                    catalog: [
+                        {
+                            id: 'catalog-1',
+                            title: '题名字段命中“专项整治”，目录信息涉及专项整治工作安排。',
+                            pageTag: '目录',
+                            generalMatchedTerms: [
+                                { word: '整改措施' },
+                                { word: '情况通报' },
+                                { word: '内部纪要' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '专项整治' },
+                                { word: '集中排查' }
+                            ],
+                            description: '目录题名中出现专项整治和整改措施等敏感表述，符合目录敏感词控制条件。',
+                            rules: [
+                                '通用敏感词库-通用敏感词库-涉及我党和国家重大问题、重大政治事件尚未作出结论的、不宜公开的，对社会开放会影响党内团结、党和国家机关工作正常开展的档案',
+                                '全宗敏感词库-市政府办公厅敏感词库-政治类档案'
+                            ]
+                        },
+                        {
+                            id: 'catalog-2',
+                            title: '责任者字段命中“党组”，目录元数据体现党组织内部事项。',
+                            pageTag: '目录',
+                            generalMatchedTerms: [
+                                { word: '党组' },
+                                { word: '内部文件' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '党组会议记录' }
+                            ],
+                            description: '责任者字段出现党组字样，属于组织内部工作主体信息，需纳入目录敏感词命中范围。',
+                            rules: [
+                                '通用敏感词库-政治类档案敏感词库-涉及党的内部工作及运行机制的材料',
+                                '全宗敏感词库-市政府办公厅敏感词库-政治类档案'
+                            ]
+                        },
+                        {
+                            id: 'catalog-3',
+                            title: '备注字段命中“内部通报”，目录备注包含内部流转属性描述。',
+                            pageTag: '目录',
+                            generalMatchedTerms: [
+                                { word: '请示报告' },
+                                { word: '涉密文档' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '内部通报' },
+                                { word: '暂不公开' }
+                            ],
+                            description: '目录备注中出现内部通报描述，说明该条档案目录已带有内部控制倾向。',
+                            rules: [
+                                '通用敏感词库-通用敏感词库-涉及我党和国家重大问题、重大政治事件尚未作出结论的、不宜公开的，对社会开放会影响党内团结、党和国家机关工作正常开展的档案',
+                                '全宗敏感词库-市发改委敏感词库-干部人事类'
+                            ]
+                        }
+                    ],
+                    fullText: [
+                        {
+                            id: 'fullText-1',
+                            title: '正文第2页命中“整改措施”“专项处置”，反映具体内部处置安排。',
+                            pageTag: 'P2',
+                            generalMatchedTerms: [
+                                { word: '整改措施' },
+                                { word: '风险预警' },
+                                { word: '违规事件' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '专项处置' },
+                                { word: '问题核查' }
+                            ],
+                            description: '全文内容包含整改和处置安排，属于内部工作部署类信息，触发全文敏感词规则。',
+                            rules: [
+                                '通用敏感词库-公共安全类档案敏感词库-涉及公共安全风险监测与预警的敏感材料',
+                                '通用敏感词库-纪检监察类档案敏感词库-涉及线索受理与初核阶段的敏感材料'
+                            ]
+                        },
+                        {
+                            id: 'fullText-2',
+                            title: '正文第3页命中“领导批示”，文本涉及领导意见与处置要求。',
+                            pageTag: 'P3',
+                            generalMatchedTerms: [
+                                { word: '领导批示' },
+                                { word: '高层意见' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '办公厅督办' },
+                                { word: '限期落实' }
+                            ],
+                            description: '全文内容出现领导批示字样，涉及内部审批和指示信息，需要重点关注。',
+                            rules: [
+                                '通用敏感词库-通用敏感词库-涉及各级党和政府领导人及社会各界著名爱国进步人士的政治历史评价及工作与生活中不宜公开的，对社会开放有损个人形象、人格尊严和声誉的档案',
+                                '全宗敏感词库-市政府办公厅敏感词库-政治类档案'
+                            ]
+                        },
+                        {
+                            id: 'fullText-3',
+                            title: '正文第5页命中“专题会议纪要”“风险排查”，反映内部专题研究内容。',
+                            pageTag: 'P5',
+                            generalMatchedTerms: [
+                                { word: '风险排查' },
+                                { word: '安全隐患' },
+                                { word: '责任倒查' }
+                            ],
+                            fondsMatchedTerms: [
+                                { word: '专题会议纪要' },
+                                { word: '联合调查组' }
+                            ],
+                            description: '全文中同时出现专题会议纪要和风险排查内容，符合内部专题研判材料特征。',
+                            rules: [
+                                '通用敏感词库-公共安全类档案敏感词库-涉及公共安全风险监测与预警的敏感材料',
+                                '全宗敏感词库-市教育局敏感词库-公共安全类',
+                                '通用敏感词库-纪检监察类档案敏感词库-涉及线索受理与初核阶段的敏感材料'
+                            ]
+                        }
+                    ],
+                    semantic: [
+                        {
+                            id: 'semantic-1',
+                            title: '三讲教育整改措施农调队专项处副处长沈国良中央决定在县级以上党政领导班子、领导干部中，用整风的精神开展以讲学习、讲政治、讲正气为主要内容的党性党...',
+                            pageTag: 'P2',
+                            description: '内容涉及领导干部的党性党风教育整改，属于单位内部工作相关材料，符合控制规则-单位内部工作类档案-工作报告相关材料。',
+                            rules: [
+                                '政治类敏感内容-涉及我党和国家重大问题、重大政治事件尚未作出结论的材料',
+                                '组织人事类敏感内容-涉及党政机关内部运行与人事调整规划材料'
+                            ]
+                        },
+                        {
+                            id: 'semantic-2',
+                            title: '我要以这次集中一段时间三讲教育为新的起点，深刻反省群众提的、上级点的、自己找的种种问题和意见，正确对待这些问题和意见，有则改之，无则加勉，努力...',
+                            pageTag: 'P2',
+                            description: '内容涉及领导干部的自我反省与整改，属于单位内部工作相关材料，符合控制规则-单位内部工作类档案-工作报告相关材料。',
+                            rules: [
+                                '干部考核类敏感内容-涉及各级党和政府领导人自我剖析与民主生活会相关记录',
+                                '纪检监察类敏感内容-涉及党风廉政建设与个人作风整改的内部报告'
+                            ]
+                        },
+                        {
+                            id: 'semantic-3',
+                            title: '密切联系群众，增强全心全意为人民服务的宗旨观念。今后开展工作要更多地坚持从群众中来，到群众中去的群众路线；充分发扬民主，将群众满意不满意作为行...',
+                            pageTag: 'P2',
+                            description: '内容涉及领导干部的工作方法和群众路线，属于单位内部工作相关材料，符合控制规则-单位内部工作类档案-工作报告相关材料。',
+                            rules: [
+                                '内部工作指导类敏感内容-涉及党内政治生活和群众路线教育实践活动相关部署',
+                                '政治类敏感内容-涉及地方党委政府重大方针政策的内部讨论纪要'
+                            ]
+                        },
+                        {
+                            id: 'semantic-4',
+                            title: '针对前一阶段征求意见情况，专题梳理了班子成员在思想作风、工作作风、组织纪律等方面存在的突出问题，并提出分阶段整改目标...',
+                            pageTag: 'P4',
+                            description: '内容体现内部问题排查和分阶段整改安排，属于单位内部工作复盘类材料，符合语义命中控制特征。',
+                            rules: [
+                                '纪检监察类敏感内容-涉及领导班子作风问题整改与内部查处材料',
+                                '组织人事类敏感内容-涉及领导干部队伍建设中的突出问题通报',
+                                '内部考核评价敏感内容-涉及班子成员年度考核评价与整改反馈单'
+                            ]
+                        },
+                        {
+                            id: 'semantic-5',
+                            title: '围绕重点岗位监督、专题教育推进、后续检查验收等事项，提出了责任分工、时限要求和内部报送路径，形成闭环整改工作方案...',
+                            pageTag: 'P6',
+                            description: '内容涉及责任分工和后续检查安排，属于内部闭环管理材料，符合语义命中控制特征。',
+                            rules: [
+                                '内部监督管理敏感内容-涉及重点岗位权力运行监督制约机制实施方案',
+                                '审计检查类敏感内容-涉及内部审计发现问题后续整改与验收情况报告'
+                            ]
+                        }
+                    ]
+                };
+
+                // 统计每个二级标签下的条目数量，供标签文案直接使用。
+                ctrl.resultCounts = {
+                    catalog: ctrl.resultGroups.catalog.length,
+                    fullText: ctrl.resultGroups.fullText.length,
+                    semantic: ctrl.resultGroups.semantic.length
+                };
+                ctrl.resultCounts.all = ctrl.resultCounts.catalog + ctrl.resultCounts.fullText + ctrl.resultCounts.semantic;
+
+                // 默认展示“全部”标签，确保进入页面时可以看到完整结果。
+                ctrl.activeResultTab = 'all';
+                ctrl.updateDisplayedResults();
+            };
+
+            /**
+             * 根据当前激活的二级标签刷新右侧展示数据。
+             * “全部”标签会按照目录、全文敏感词、语义命中的顺序合并展示。
+             */
+            ctrl.updateDisplayedResults = function() {
+                if (ctrl.activeResultTab === 'all') {
+                    ctrl.displayedResults = []
+                        .concat(ctrl.resultGroups.catalog)
+                        .concat(ctrl.resultGroups.fullText)
+                        .concat(ctrl.resultGroups.semantic);
+                    return;
+                }
+
+                // 其他标签直接显示对应分组，避免模板中重复判断数据来源。
+                ctrl.displayedResults = ctrl.resultGroups[ctrl.activeResultTab] || [];
+            };
+
+            /**
+             * 切换右侧二级标签。
+             * 切换后同步刷新列表并重新渲染图标，保证新增按钮图标保持可见。
+             * @param {string} tabKey 当前选中的标签 key。
+             */
+            ctrl.setActiveResultTab = function(tabKey) {
+                ctrl.activeResultTab = tabKey;
+                ctrl.updateDisplayedResults();
+                IconService.refresh();
+            };
+
+            /**
+             * 生成二级标签按钮样式。
+             * 激活态与现有页面样式保持一致，未激活时保留原本的悬浮颜色反馈。
+             * @param {string} tabKey 当前标签 key。
+             * @returns {string} 对应的 Tailwind 样式字符串。
+             */
+            ctrl.getSecondaryTabClass = function(tabKey) {
+                if (ctrl.activeResultTab === tabKey) {
+                    return 'text-primary border-primary font-medium';
+                }
+
+                return 'text-slate-500 border-transparent hover:text-slate-800';
+            };
+            
+            ctrl.goBack = function() {
+                // 关闭当前标签页
+                window.close();
+            };
+
+            ctrl.$onInit = function() {
+                try {
+                    var docData = localStorage.getItem('oaas_current_document');
+                    if (docData) {
+                        ctrl.document = JSON.parse(docData);
+                    } else {
+                        // 默认数据
+                        ctrl.document = {
+                            title: '"三讲"教育整改措施——农调队专项处副处长 沈国良',
+                            fondsCode: '0325测试',
+                            fondsName: '3.0版本',
+                            category: '-',
+                            year: '-',
+                            responsible: '浙江省统计局',
+                            retention: '-',
+                            security: '-',
+                            archiveCode: 'J107-052-000481-089',
+                            aiResult: '控制'
+                        };
+                    }
+                } catch(e) {
+                    console.error("Failed to parse document data", e);
+                    ctrl.document = {
+                        title: '"三讲"教育整改措施——农调队专项处副处长 沈国良',
+                        fondsCode: '0325测试',
+                        fondsName: '3.0版本',
+                        category: '-',
+                        year: '-',
+                        responsible: '浙江省统计局',
+                        retention: '-',
+                        security: '-',
+                        archiveCode: 'J107-052-000481-089',
+                        aiResult: '控制'
+                    };
+                }
+                // 初始化右侧鉴定结果区示例数据。
+                ctrl.initializeResultData();
+                IconService.refresh();
+            };
+        }]);
+    </script>
+</body>
+</html>
