@@ -73,18 +73,62 @@
                 </div>
             </div>
             
-            <div class="flex items-center space-x-4 ml-3 shrink-0">
-                <!-- 控制印章 (长方形) -->
-                <div ng-if="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控'" class="relative px-3 py-0.5 border-2 border-red-600 text-red-600 rounded font-bold text-sm transform -rotate-12 opacity-80 shadow-sm">
-                    控制
-                </div>
-                <div ng-if="ctrl.document.aiResult === '开放'" class="relative px-3 py-0.5 border-2 border-emerald-600 text-emerald-600 rounded font-bold text-sm transform -rotate-12 opacity-80 shadow-sm">
-                    开放
-                </div>
+            <div class="flex items-center ml-3 shrink-0 relative">
+                <span class="text-sm font-medium text-slate-700 mr-3">经人工审核后，确定AI鉴定结果</span>
                 
-                <button class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2" ng-click="ctrl.goBack()" title="返回">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div class="relative">
+                    <button ng-click="ctrl.isReviewDropdownOpen = !ctrl.isReviewDropdownOpen" class="flex items-center justify-between border border-slate-300 bg-white px-3 py-1.5 rounded-md shadow-sm min-w-[200px] text-left focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors hover:bg-slate-50 z-50 relative">
+                        <span ng-if="!ctrl.document.manualReviewResult" class="text-slate-400 text-sm">请选择复核结果...</span>
+                        
+                        <!-- 显示选中的结果 -->
+                        <span ng-if="ctrl.document.manualReviewResult === 'correct_open'" class="text-sm text-slate-700 flex items-center">
+                            正确，决定<span class="text-emerald-600 font-bold text-xl ml-1">开放</span>
+                        </span>
+                        <span ng-if="ctrl.document.manualReviewResult === 'error_control'" class="text-sm text-slate-700 flex items-center">
+                            有误，决定<span class="text-red-600 font-bold text-xl ml-1">受控</span>
+                        </span>
+                        <span ng-if="ctrl.document.manualReviewResult === 'correct_control'" class="text-sm text-slate-700 flex items-center">
+                            正确，决定<span class="text-red-600 font-bold text-xl ml-1">受控</span>
+                        </span>
+                        <span ng-if="ctrl.document.manualReviewResult === 'error_open'" class="text-sm text-slate-700 flex items-center">
+                            有误，决定<span class="text-emerald-600 font-bold text-xl ml-1">开放</span>
+                        </span>
+                        
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 ml-2 shrink-0"></i>
+                    </button>
+                    
+                    <!-- Dropdown Backdrop -->
+                    <div ng-show="ctrl.isReviewDropdownOpen" class="fixed inset-0 z-40" ng-click="ctrl.isReviewDropdownOpen = false"></div>
+                    
+                    <!-- Dropdown Menu -->
+                    <div ng-show="ctrl.isReviewDropdownOpen" class="absolute right-0 mt-1 w-full min-w-[200px] bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden">
+                        <ul class="py-1">
+                            <!-- AI 建议开放时的选项 -->
+                            <li ng-if="ctrl.document.aiResult === '开放'">
+                                <button ng-click="ctrl.setReviewResult('correct_open')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center focus:outline-none">
+                                    正确，决定<span class="text-emerald-600 font-bold text-lg ml-1">开放</span>
+                                </button>
+                            </li>
+                            <li ng-if="ctrl.document.aiResult === '开放'">
+                                <button ng-click="ctrl.setReviewResult('error_control')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center focus:outline-none">
+                                    有误，决定<span class="text-red-600 font-bold text-lg ml-1">受控</span>
+                                </button>
+                            </li>
+                            
+                            <!-- AI 建议控制/受控时的选项 -->
+                            <li ng-if="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控'">
+                                <button ng-click="ctrl.setReviewResult('correct_control')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center focus:outline-none">
+                                    正确，决定<span class="text-red-600 font-bold text-lg ml-1">受控</span>
+                                </button>
+                            </li>
+                            <li ng-if="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控'">
+                                <button ng-click="ctrl.setReviewResult('error_open')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center focus:outline-none">
+                                    有误，决定<span class="text-emerald-600 font-bold text-lg ml-1">开放</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -135,7 +179,7 @@
                         <span class="text-xs font-medium">旋转</span>
                     </button>
                     <div class="w-px h-3 bg-slate-300 mx-1"></div>
-                    <button class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded hover:bg-slate-100 text-slate-600 hover:text-primary focus:outline-none transition-colors" title="人工标注">
+                    <button ng-click="ctrl.openAnnotationModal()" ng-disabled="!ctrl.hasSelection" ng-class="{'opacity-50 cursor-not-allowed': !ctrl.hasSelection, 'hover:bg-slate-100 hover:text-primary text-slate-600': ctrl.hasSelection}" class="flex items-center justify-center space-x-1 px-2 py-0.5 rounded focus:outline-none transition-colors" title="人工标注其实就是对漏检的内容进行人工处理。未复制文件内容时，请把该按钮置灰；复制文字时，按钮可点击。点击按钮后，弹出选择敏感内容窗口（从敏感内容管理模块取），单选某项敏感内容后，点击加入漏检按钮，即可在错检漏检标签内生成一条漏检记录。并在错检漏检模块也生成一条记录。">
                         <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
                         <span class="text-xs font-medium">人工标注</span>
                     </button>
@@ -150,14 +194,14 @@
             <!-- 一级标签页 -->
             <div class="px-4 border-b border-slate-200 bg-slate-50/50">
                 <div class="flex space-x-6 text-sm font-medium text-slate-600">
-                    <button class="text-primary border-b-2 border-primary py-2.5 px-1 focus:outline-none">智能鉴定</button>
-                    <button class="hover:text-primary py-2.5 px-1 border-b-2 border-transparent focus:outline-none transition-colors">错检漏检</button>
-                    <button class="hover:text-primary py-2.5 px-1 border-b-2 border-transparent focus:outline-none transition-colors">审核记录</button>
+                    <button ng-click="ctrl.activePrimaryTab = 'ai'" ng-class="{'text-primary border-b-2 border-primary': ctrl.activePrimaryTab === 'ai', 'hover:text-primary border-b-2 border-transparent': ctrl.activePrimaryTab !== 'ai'}" class="py-2.5 px-1 focus:outline-none transition-colors">智能鉴定</button>
+                    <button ng-click="ctrl.activePrimaryTab = 'errorOmission'" ng-class="{'text-primary border-b-2 border-primary': ctrl.activePrimaryTab === 'errorOmission', 'hover:text-primary border-b-2 border-transparent': ctrl.activePrimaryTab !== 'errorOmission'}" class="py-2.5 px-1 focus:outline-none transition-colors">错检漏检</button>
+                    <button ng-click="ctrl.activePrimaryTab = 'audit'" ng-class="{'text-primary border-b-2 border-primary': ctrl.activePrimaryTab === 'audit', 'hover:text-primary border-b-2 border-transparent': ctrl.activePrimaryTab !== 'audit'}" class="py-2.5 px-1 focus:outline-none transition-colors">审核记录</button>
                 </div>
             </div>
 
             <!-- 二级标签页 -->
-            <div class="px-4 border-b border-slate-200">
+            <div class="px-4 border-b border-slate-200" ng-if="ctrl.activePrimaryTab === 'ai'">
                 <div class="flex space-x-6 text-sm">
                     <button
                         ng-repeat="tab in ctrl.secondaryTabs track by tab.key"
@@ -170,7 +214,7 @@
             </div>
 
             <!-- 鉴定结果列表 -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 pb-32">
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 pb-32" ng-show="ctrl.activePrimaryTab === 'ai'">
                 <div
                     ng-repeat="item in ctrl.displayedResults track by item.id"
                     class="border border-slate-200 rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -213,31 +257,142 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mt-3 flex items-center justify-end space-x-4 border-t border-slate-100 pt-2">
-                        <button class="flex items-center space-x-1 text-slate-500 hover:text-emerald-600 focus:outline-none transition-colors">
-                            <i data-lucide="thumbs-up" class="w-4 h-4"></i>
-                            <span class="text-xs">认可</span>
+                    <div class="mt-3 flex items-center justify-end space-x-4 border-t border-slate-100 pt-2 relative">
+                        <button ng-click="ctrl.toggleErrorDropdown(item.id, $event)" class="flex items-center space-x-1 text-slate-500 hover:text-rose-600 focus:outline-none transition-colors">
+                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                            <span class="text-xs">错检</span>
                         </button>
-                        <button class="flex items-center space-x-1 text-slate-500 hover:text-red-600 focus:outline-none transition-colors">
-                            <i data-lucide="thumbs-down" class="w-4 h-4"></i>
-                            <span class="text-xs">不认可</span>
-                        </button>
-                        <button class="flex items-center space-x-1 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors">
-                            <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                            <span class="text-xs">更多</span>
-                        </button>
+                        
+                        <!-- Dropdown Backdrop -->
+                        <div ng-show="ctrl.activeErrorDropdown === item.id" class="fixed inset-0 z-40" ng-click="ctrl.activeErrorDropdown = null; $event.stopPropagation()"></div>
+                        
+                        <!-- Dropdown Menu -->
+                        <div ng-show="ctrl.activeErrorDropdown === item.id" class="absolute right-0 bottom-full mb-2 w-48 bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden">
+                            <ul class="py-1">
+                                <li>
+                                    <button ng-click="ctrl.markAsError(item, '错检为受控')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 focus:outline-none">
+                                        错检为受控
+                                    </button>
+                                </li>
+                                <li>
+                                    <button ng-click="ctrl.markAsError(item, '错检敏感类型或内容')" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 focus:outline-none">
+                                        错检敏感类型或内容
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
+                </div>
+
+                <div ng-if="ctrl.displayedResults.length === 0" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
+                    <i data-lucide="check-circle" class="w-10 h-10 text-emerald-400 mb-2"></i>
+                    <p class="text-sm font-medium text-slate-600">经AI鉴定未发现敏感内容</p>
+                    <p class="text-xs text-slate-400 mt-1">建议该档案状态为开放</p>
                 </div>
             </div>
 
+
+            <!-- 错检漏检列表 -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 pb-32" ng-show="ctrl.activePrimaryTab === 'errorOmission'">
+                <div ng-repeat="item in ctrl.documentOmissions track by item.id"
+                     class="border border-slate-200 rounded-lg p-4 bg-white shadow-sm relative overflow-hidden group">
+                    <div class="absolute left-0 top-0 bottom-0 w-1" ng-class="item.type === 'error' ? 'bg-rose-500' : 'bg-amber-500'"></div>
+                    
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="text-sm font-medium text-slate-800 leading-snug flex-1 pr-4 whitespace-pre-wrap">
+                            {{item.type === 'error' ? item.errorContent : item.omissionContent}}
+                        </div>
+                        <span ng-if="item.type === 'error'" class="bg-rose-100 text-rose-800 text-xs font-bold px-1.5 py-0.5 rounded shrink-0">错检</span>
+                        <span ng-if="item.type === 'omission'" class="bg-amber-100 text-amber-800 text-xs font-bold px-1.5 py-0.5 rounded shrink-0">漏检</span>
+                    </div>
+                    
+                    <div class="space-y-2 text-xs mt-3 border-t border-slate-100 pt-2">
+                        <!-- 错检专属字段 -->
+                        <div class="flex" ng-if="item.type === 'error'">
+                            <span class="text-slate-400 shrink-0 w-24">错检类型:</span>
+                            <span class="text-slate-600 font-medium bg-slate-100 px-1.5 py-0.5 rounded">{{item.errorType}}</span>
+                        </div>
+                        <div class="flex" ng-if="item.type === 'error'">
+                            <span class="text-slate-400 shrink-0 w-24">错检描述:</span>
+                            <span class="text-slate-600 leading-relaxed">{{item.errorDescription}}</span>
+                        </div>
+                        
+                        <!-- 漏检专属字段 -->
+                        <div class="flex" ng-if="item.type === 'omission'">
+                            <span class="text-slate-400 shrink-0 w-24">所属敏感内容:</span>
+                            <span class="text-slate-600 font-medium">{{item.belongingSensitiveContent}}</span>
+                        </div>
+                        
+                        <!-- 公共字段 -->
+                        <div class="flex">
+                            <span class="text-slate-400 shrink-0 w-24">创建时间:</span>
+                            <span class="text-slate-600">{{item.createdAt}}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div ng-if="ctrl.documentOmissions.length === 0" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
+                    <i data-lucide="inbox" class="w-10 h-10 text-slate-300 mb-2"></i>
+                    <p class="text-sm">暂无错检漏检记录</p>
+                </div>
+            </div>
+
+            <!-- 审核记录列表 -->
+            <div class="flex-1 flex flex-col overflow-hidden" ng-show="ctrl.activePrimaryTab === 'audit'">
+                <!-- 提示语句 -->
+                <div class="px-4 py-3 bg-blue-50/50 border-b border-blue-100 text-xs text-blue-600 flex items-center shrink-0">
+                    <i data-lucide="info" class="w-4 h-4 mr-2 shrink-0"></i>
+                    <span>此处显示错检、漏检（人工标注）、人工审核结果的记录。</span>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 pb-32">
+                    <div ng-repeat="item in ctrl.auditRecords track by item.id" class="flex space-x-3">
+                        <div class="flex flex-col items-center mt-1 shrink-0">
+                            <div class="w-2 h-2 rounded-full bg-primary ring-4 ring-sky-50"></div>
+                            <div class="w-px h-full bg-slate-200 mt-2" ng-if="!$last"></div>
+                        </div>
+                        <div class="flex-1 bg-white border border-slate-200 rounded-lg p-3 shadow-sm mb-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-sm font-medium text-slate-800">{{item.auditor}}</span>
+                                <span class="text-xs text-slate-500">{{item.auditTime}}</span>
+                            </div>
+                            <div class="text-sm text-slate-600 flex items-center">
+                                <span class="text-slate-400 mr-2 shrink-0">审核行为:</span>
+                                <span class="px-2 py-0.5 rounded text-xs font-medium"
+                                      ng-class="{
+                                          'bg-amber-50 text-amber-700 border border-amber-200': item.action === '标注漏检',
+                                          'bg-rose-50 text-rose-700 border border-rose-200': item.action === '标注错检',
+                                          'bg-emerald-50 text-emerald-700 border border-emerald-200': item.action === '确定结果'
+                                      }">
+                                    {{item.action}}
+                                </span>
+                            </div>
+                            <div class="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100" ng-if="item.detail">
+                                {{item.detail}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div ng-if="ctrl.auditRecords.length === 0" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
+                        <i data-lucide="clock" class="w-10 h-10 text-slate-300 mb-2"></i>
+                        <p class="text-sm">暂无审核记录</p>
+                    </div>
+                </div>
+            </div>
             <!-- 底部固定 AI 建议条 -->
-            <div class="absolute bottom-0 left-0 right-0 bg-blue-50/90 backdrop-blur-sm border-t border-blue-100 p-4 m-2 rounded-lg flex items-start space-x-3">
-                <div class="bg-blue-100 p-2 rounded-full text-primary shrink-0">
+            <div class="absolute bottom-0 left-0 right-0 backdrop-blur-sm border-t p-4 m-2 rounded-lg flex items-start space-x-3"
+                 ng-class="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控' ? 'bg-red-50/90 border-red-100' : 'bg-emerald-50/90 border-emerald-100'">
+                <div class="p-2 rounded-full shrink-0"
+                     ng-class="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'">
                     <i data-lucide="bot" class="w-5 h-5"></i>
                 </div>
                 <div class="flex-1">
                     <div class="font-medium text-slate-800 mb-1 flex items-center">
-                        经AI鉴定后建议：<span class="text-red-600 font-bold ml-1">控制</span>
+                        经AI鉴定后建议：
+                        <span class="font-bold ml-1"
+                              ng-class="ctrl.document.aiResult === '控制' || ctrl.document.aiResult === '受控' ? 'text-red-600' : 'text-emerald-600'">
+                            {{ctrl.document.aiResult}}
+                        </span>
                     </div>
                     <div class="text-xs text-slate-600 leading-relaxed line-clamp-2">
                         该档案内容涉及领导干部的党性党风教育整改措施，属于单位内部工作类档案中的工作报告相关材料，符合控制...
@@ -245,6 +400,59 @@
                 </div>
             </div>
         </div>
+    
+    <!-- 人工标注选择敏感内容弹窗 -->
+    <div ng-if="ctrl.showAnnotationModal" class="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 class="text-lg font-bold text-slate-800">人工标注 - 选择敏感内容</h3>
+                <button ng-click="ctrl.closeAnnotationModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">选中的内容：</label>
+                    <div class="p-3 bg-slate-50 rounded border border-slate-200 text-slate-800 text-sm whitespace-pre-wrap">{{ctrl.selectedText}}</div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">选择所属敏感内容：</label>
+                    <div class="border border-slate-200 rounded-md overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-2 w-10 text-center"></th>
+                                    <th class="px-4 py-2 font-medium text-slate-600">敏感内容标题</th>
+                                    <th class="px-4 py-2 font-medium text-slate-600">敏感类型</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="item in ctrl.sensitiveContents track by item.id" class="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors" ng-click="ctrl.selectedSensitiveContent = item">
+                                    <td class="px-4 py-2 text-center">
+                                        <input type="radio" ng-model="ctrl.selectedSensitiveContent" ng-value="item" class="w-4 h-4 text-primary focus:ring-primary border-slate-300">
+                                    </td>
+                                    <td class="px-4 py-2 text-slate-800">{{item.title}}</td>
+                                    <td class="px-4 py-2 text-slate-600">
+                                        <span class="px-2 py-0.5 bg-slate-100 rounded text-xs">{{item.type.name}}</span>
+                                    </td>
+                                </tr>
+                                <tr ng-if="ctrl.sensitiveContents.length === 0">
+                                    <td colspan="3" class="px-4 py-8 text-center text-slate-500">暂无敏感内容数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end space-x-3 shrink-0">
+                <button ng-click="ctrl.closeAnnotationModal()" class="px-4 py-2 bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50 transition-colors text-sm font-medium">取消</button>
+                <button ng-click="ctrl.addToOmission()" ng-disabled="!ctrl.selectedSensitiveContent" ng-class="{'opacity-50 cursor-not-allowed': !ctrl.selectedSensitiveContent}" class="px-4 py-2 bg-primary border border-primary rounded text-white hover:bg-sky-800 transition-colors text-sm font-medium">加入漏检</button>
+            </div>
+        </div>
+    </div>
     </main>
 
     <script>
@@ -265,6 +473,30 @@
 
         app.controller('DetailController', ['IconService', function(IconService) {
             var ctrl = this;
+            ctrl.activePrimaryTab = 'ai';
+            ctrl.auditRecords = [
+                { id: 1, auditor: '张三 (馆内用户)', auditTime: '2026-05-01 09:30:00', action: '标注错检', detail: '将第2页的“经济预算目标”从受控修改为开放' },
+                { id: 2, auditor: '李四 (形成/移交单位用户)', auditTime: '2026-05-01 10:15:00', action: '标注漏检', detail: '人工标注漏检内容：专项整治工作安排...' },
+                { id: 3, auditor: '王五 (馆内用户)', auditTime: '2026-05-01 11:20:00', action: '确定结果', detail: '最终确认该档案开放状态为：控制' }
+            ];
+            ctrl.documentOmissions = [
+                {
+                    id: 1001,
+                    type: 'error',
+                    errorContent: '关于2025年全国档案工作',
+                    errorType: '错检为受控',
+                    errorDescription: '以上内容AI错检为干部人事类档案敏感内容，经人工审核后确认该内容不涉及敏感信息。',
+                    createdAt: '2026-05-01 11:30:00'
+                },
+                {
+                    id: 1002,
+                    type: 'omission',
+                    omissionContent: '专项整治工作安排...',
+                    belongingSensitiveContent: '涉及未公开的专项整治行动方案及执行细节',
+                    createdAt: '2026-05-01 11:35:00'
+                }
+            ];
+
 
             /**
              * 初始化右侧结果标签页的静态示例数据。
@@ -452,6 +684,15 @@
                     ]
                 };
 
+                // 如果AI鉴定结果是“开放”，则清空所有命中信息
+                if (ctrl.document && ctrl.document.aiResult === '开放') {
+                    ctrl.resultGroups = {
+                        catalog: [],
+                        fullText: [],
+                        semantic: []
+                    };
+                }
+
                 // 统计每个二级标签下的条目数量，供标签文案直接使用。
                 ctrl.resultCounts = {
                     catalog: ctrl.resultGroups.catalog.length,
@@ -512,6 +753,312 @@
                 window.close();
             };
 
+            // 人工复核下拉状态与操作
+            ctrl.isReviewDropdownOpen = false;
+            ctrl.setReviewResult = function(result) {
+                ctrl.document.manualReviewResult = result;
+                ctrl.isReviewDropdownOpen = false;
+                
+                var d = new Date();
+                var pad = function(n) { return n < 10 ? '0' + n : n; };
+                var createdAt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                
+                var currentUserName = '当前用户';
+                try {
+                    var userStr = localStorage.getItem('oaas_current_user');
+                    if (userStr) {
+                        currentUserName = JSON.parse(userStr).realName || currentUserName;
+                    }
+                } catch(e) {}
+                
+                var detailText = '';
+                var finalManualResult = '待复核';
+                if (result === 'correct_open') { detailText = '确定AI鉴定结果正确，决定开放'; finalManualResult = '开放'; }
+                if (result === 'error_control') { detailText = '确定AI鉴定结果有误，决定受控'; finalManualResult = '受控'; }
+                if (result === 'correct_control') { detailText = '确定AI鉴定结果正确，决定受控'; finalManualResult = '受控'; }
+                if (result === 'error_open') { detailText = '确定AI鉴定结果有误，决定开放'; finalManualResult = '开放'; }
+
+                ctrl.auditRecords.unshift({
+                    id: Date.now() + 2,
+                    auditor: currentUserName,
+                    auditTime: createdAt,
+                    action: '确定结果',
+                    detail: detailText
+                });
+
+                // 将人工复核结果写入 localStorage 供任务列表读取
+                try {
+                    var reviewed = JSON.parse(localStorage.getItem('oaas_reviewed_results')) || {};
+                    var docId = ctrl.document.archiveCode || ctrl.document.archiveNo;
+                    if (docId) {
+                        reviewed[docId] = finalManualResult;
+                        localStorage.setItem('oaas_reviewed_results', JSON.stringify(reviewed));
+                    }
+                } catch(e) {}
+                
+                $timeout(function() {
+                    IconService.refresh();
+                });
+            };
+
+            // 错检下拉状态与操作
+            ctrl.activeErrorDropdown = null;
+            
+            ctrl.toggleErrorDropdown = function(itemId, $event) {
+                if ($event) $event.stopPropagation();
+                if (ctrl.activeErrorDropdown === itemId) {
+                    ctrl.activeErrorDropdown = null;
+                } else {
+                    ctrl.activeErrorDropdown = itemId;
+                }
+            };
+
+            ctrl.markAsError = function(item, errorType) {
+                ctrl.activeErrorDropdown = null;
+                
+                var d = new Date();
+                var pad = function(n) { return n < 10 ? '0' + n : n; };
+                var createdAt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                
+                // 1. 在当前页面的右侧错检漏检列表中生成一条错检记录
+                var errorDesc = '';
+                if (errorType === '错检为受控') {
+                    errorDesc = '以上内容AI错检为受控，经人工审核后确认该内容不涉及敏感信息。';
+                } else {
+                    errorDesc = '以上内容AI错检了敏感类型或内容，需人工修正。';
+                }
+
+                var newItem = {
+                    id: Date.now(),
+                    type: 'error',
+                    errorContent: item.title,
+                    errorType: errorType,
+                    errorDescription: errorDesc,
+                    createdAt: createdAt
+                };
+                ctrl.documentOmissions.unshift(newItem);
+                
+                // 2. 将这条鉴定结果从智能鉴定列表中移除
+                // 从所有可能的分组中移除
+                if (ctrl.resultGroups.catalog) {
+                    ctrl.resultGroups.catalog = ctrl.resultGroups.catalog.filter(function(r) { return r.id !== item.id; });
+                }
+                if (ctrl.resultGroups.fullText) {
+                    ctrl.resultGroups.fullText = ctrl.resultGroups.fullText.filter(function(r) { return r.id !== item.id; });
+                }
+                if (ctrl.resultGroups.semantic) {
+                    ctrl.resultGroups.semantic = ctrl.resultGroups.semantic.filter(function(r) { return r.id !== item.id; });
+                }
+                
+                // 更新统计数字
+                ctrl.resultCounts = {
+                    catalog: ctrl.resultGroups.catalog.length,
+                    fullText: ctrl.resultGroups.fullText.length,
+                    semantic: ctrl.resultGroups.semantic.length
+                };
+                ctrl.resultCounts.all = ctrl.resultCounts.catalog + ctrl.resultCounts.fullText + ctrl.resultCounts.semantic;
+                
+                // 更新显示列表
+                ctrl.updateDisplayedResults();
+
+                // 3. 自动切换到错检漏检标签以展示新数据
+                ctrl.activePrimaryTab = 'errorOmission';
+                
+                // 4. 同时增加一条审核记录
+                var currentUserName = '当前用户';
+                try {
+                    var userStr = localStorage.getItem('oaas_current_user');
+                    if (userStr) {
+                        currentUserName = JSON.parse(userStr).realName || currentUserName;
+                    }
+                } catch(e) {}
+                
+                ctrl.auditRecords.unshift({
+                    id: Date.now() + 1,
+                    auditor: currentUserName,
+                    auditTime: createdAt,
+                    action: '标注错检',
+                    detail: '将鉴定结果标记为错检：' + errorType
+                });
+                
+                // 5. 将错检记录写入 localStorage，以便错检漏检模块读取
+                try {
+                    var errorsList = JSON.parse(localStorage.getItem('oaas_error_list')) || [];
+                    
+                    var newErrorRecord = {
+                        id: Date.now(),
+                        taskName: ctrl.document.title,
+                        errorContent: item.title,
+                        errorType: errorType,
+                        errorDescription: errorDesc,
+                        createdAt: createdAt,
+                        selected: false
+                    };
+                    
+                    errorsList.unshift(newErrorRecord);
+                    localStorage.setItem('oaas_error_list', JSON.stringify(errorsList));
+                    
+                } catch(e) {
+                    console.error('Failed to save error record', e);
+                }
+
+                $timeout(function() {
+                    IconService.refresh();
+                });
+            };
+
+            
+            // 人工标注相关状态
+            ctrl.hasSelection = false;
+            ctrl.selectedText = '';
+            ctrl.showAnnotationModal = false;
+            ctrl.sensitiveContents = [];
+            ctrl.selectedSensitiveContent = null;
+
+            // 监听全局选区变化
+            document.addEventListener('selectionchange', function() {
+                var selection = window.getSelection();
+                var text = selection.toString().trim();
+                
+                // 由于 AngularJS 的机制，需要使用 $timeout 或 $scope.$apply 来通知视图更新
+                if (window.angular) {
+                    var scope = angular.element(document.querySelector('[ng-controller="DetailController as ctrl"]')).scope();
+                    if (scope) {
+                        scope.$applyAsync(function() {
+                            ctrl.selectedText = text;
+                            ctrl.hasSelection = text.length > 0;
+                        });
+                    }
+                }
+            });
+
+            // 也可以监听 iframe 内部的选区变化 (如果可能的话，跨域受限)
+            ctrl.initIframeSelection = function() {
+                var iframe = document.querySelector('iframe');
+                if (iframe) {
+                    iframe.addEventListener('load', function() {
+                        try {
+                            var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            iframeDoc.addEventListener('selectionchange', function() {
+                                var selection = iframe.contentWindow.getSelection();
+                                var text = selection.toString().trim();
+                                
+                                var scope = angular.element(document.querySelector('[ng-controller="DetailController as ctrl"]')).scope();
+                                if (scope) {
+                                    scope.$applyAsync(function() {
+                                        ctrl.selectedText = text;
+                                        ctrl.hasSelection = text.length > 0;
+                                    });
+                                }
+                            });
+                        } catch(e) {
+                            // 跨域限制，静默失败
+                        }
+                    });
+                }
+            };
+
+            ctrl.openAnnotationModal = function() {
+                if (!ctrl.hasSelection) return;
+                
+                // 加载敏感内容数据
+                try {
+                    var storedData = localStorage.getItem('oaas_sensitive_contents_v2');
+                    if (storedData) {
+                        ctrl.sensitiveContents = JSON.parse(storedData);
+                    }
+                } catch(e) {
+                    console.error('Failed to load sensitive contents', e);
+                }
+                
+                ctrl.selectedSensitiveContent = null;
+                ctrl.showAnnotationModal = true;
+                
+                $timeout(function() {
+                    IconService.refresh();
+                });
+            };
+
+            ctrl.closeAnnotationModal = function() {
+                ctrl.showAnnotationModal = false;
+                ctrl.selectedSensitiveContent = null;
+            };
+
+            ctrl.addToOmission = function() {
+                if (!ctrl.selectedSensitiveContent || !ctrl.selectedText) return;
+                
+                var d = new Date();
+                var pad = function(n) { return n < 10 ? '0' + n : n; };
+                var createdAt = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                
+                // 1. 在当前页面的右侧错检漏检列表中生成一条漏检记录
+                var newItem = {
+                    id: Date.now(),
+                    type: 'omission',
+                    omissionContent: ctrl.selectedText,
+                    belongingSensitiveContent: ctrl.selectedSensitiveContent.title,
+                    createdAt: createdAt
+                };
+                ctrl.documentOmissions.unshift(newItem);
+                // 自动切换到错检漏检标签以展示新数据
+                ctrl.activePrimaryTab = 'errorOmission';
+                
+                // 同时增加一条审核记录
+                var currentUserName = '当前用户';
+                try {
+                    var userStr = localStorage.getItem('oaas_current_user');
+                    if (userStr) {
+                        currentUserName = JSON.parse(userStr).realName || currentUserName;
+                    }
+                } catch(e) {}
+                
+                ctrl.auditRecords.unshift({
+                    id: Date.now() + 1,
+                    auditor: currentUserName,
+                    auditTime: createdAt,
+                    action: '标注漏检',
+                    detail: '人工标注漏检内容：' + ctrl.selectedText.substring(0, 50) + (ctrl.selectedText.length > 50 ? '...' : '')
+                });
+                
+
+                // 2. 将漏检记录写入 localStorage，以便错检漏检模块读取
+                try {
+                    var omissions = JSON.parse(localStorage.getItem('oaas_omission_list')) || [];
+                    
+                    var newOmissionRecord = {
+                        id: Date.now(),
+                        taskName: ctrl.document.title,
+                        omissionContent: ctrl.selectedText,
+                        belongingSensitiveContent: ctrl.selectedSensitiveContent.title,
+                        createdAt: createdAt,
+                        selected: false
+                    };
+                    
+                    omissions.unshift(newOmissionRecord);
+                    localStorage.setItem('oaas_omission_list', JSON.stringify(omissions));
+                    
+                    alert('成功加入漏检库！');
+                } catch(e) {
+                    console.error('Failed to save omission record', e);
+                    alert('保存漏检记录失败');
+                }
+
+                ctrl.closeAnnotationModal();
+                
+                // 清除选区
+                if (window.getSelection) {
+                    if (window.getSelection().empty) {
+                        window.getSelection().empty();
+                    } else if (window.getSelection().removeAllRanges) {
+                        window.getSelection().removeAllRanges();
+                    }
+                }
+                
+                $timeout(function() {
+                    IconService.refresh();
+                });
+            };
+
             ctrl.$onInit = function() {
                 try {
                     var docData = localStorage.getItem('oaas_current_document');
@@ -547,6 +1094,14 @@
                         aiResult: '控制'
                     };
                 }
+                
+                // 如果AI鉴定结果是“开放”，则错检漏检列表中不显示“错检”信息
+                if (ctrl.document && ctrl.document.aiResult === '开放') {
+                    ctrl.documentOmissions = ctrl.documentOmissions.filter(function(item) {
+                        return item.type !== 'error';
+                    });
+                }
+                
                 // 初始化右侧鉴定结果区示例数据。
                 ctrl.initializeResultData();
                 IconService.refresh();

@@ -762,12 +762,25 @@
                     for (var j = 1; j <= 20; j++) {
                         var isControlled = (j % 3 === 0);
                         var manResult = '待复核';
-                        if (j % 4 === 1) { manResult = '开放'; }
-                        else if (j % 4 === 2) { manResult = '受控'; }
+                        
+                        // 如果不是初审阶段，则可以有其他状态
+                        if (activeIndex !== 2) {
+                            if (j % 4 === 1) { manResult = '开放'; }
+                            else if (j % 4 === 2) { manResult = '受控'; }
+                        }
+                        
+                        var archiveNo = 'J100-2023-00' + j;
+                        // 检查是否有本地缓存的人工审核结果
+                        try {
+                            var reviewed = JSON.parse(localStorage.getItem('oaas_reviewed_results')) || {};
+                            if (reviewed[archiveNo]) {
+                                manResult = reviewed[archiveNo];
+                            }
+                        } catch(e) {}
                         
                         ctrl.mockData.push({
                             fondsNo: 'J' + (100 + (j % 5)),
-                            archiveNo: 'J100-2023-00' + j,
+                            archiveNo: archiveNo,
                             title: '关于2023年度第' + j + '次工作会议的纪要',
                             creator: '市政府办公厅',
                             retentionPeriod: j % 2 === 0 ? '永久' : '30年',
@@ -778,6 +791,25 @@
                     }
 
                     $timeout(function() { IconService.refresh(); }, 0);
+                    
+                    // 监听窗口重新获得焦点，刷新复核结果
+                    window.addEventListener('focus', function() {
+                        try {
+                            var reviewed = JSON.parse(localStorage.getItem('oaas_reviewed_results')) || {};
+                            var hasChanges = false;
+                            ctrl.mockData.forEach(function(item) {
+                                if (reviewed[item.archiveNo] && item.manualResult !== reviewed[item.archiveNo]) {
+                                    item.manualResult = reviewed[item.archiveNo];
+                                    hasChanges = true;
+                                }
+                            });
+                            if (hasChanges) {
+                                $timeout(function() {
+                                    // 触发视图更新
+                                });
+                            }
+                        } catch(e) {}
+                    });
                 };
                 
                 ctrl.goBack = function() {

@@ -772,15 +772,30 @@
                         var aiRes = results[i % 2];
                         var manRes = results[i % 3];
                         
+                        // 初审阶段的鉴定任务数据，人工复核结果全部为待复核
+                        // 根据系统状态定义，'已完成'状态对应初审阶段（AI鉴定完成，准备人工初审）
+                        var isPreliminaryReview = (ctrl.task.status === '已完成' || !ctrl.task.status);
+                        var finalManualResult = isPreliminaryReview ? '待复核' : ((i % 4 === 0) ? '待复核' : manRes);
+                        
+                        var archiveCode = ctrl.task.fondsCode + '-' + ctrl.task.year + '-WS-' + (1000 + i).toString().substring(1);
+                        
+                        // 检查是否有本地缓存的人工审核结果
+                        try {
+                            var reviewed = JSON.parse(localStorage.getItem('oaas_reviewed_results')) || {};
+                            if (reviewed[archiveCode]) {
+                                finalManualResult = reviewed[archiveCode];
+                            }
+                        } catch(e) {}
+
                         ctrl.dataList.push({
                             fondsCode: ctrl.task.fondsCode,
-                            archiveCode: ctrl.task.fondsCode + '-' + ctrl.task.year + '-WS-' + (1000 + i).toString().substring(1),
+                            archiveCode: archiveCode,
                             title: '2023年度第' + i + '项工作执行报告',
                             responsible: responsibles[i % 5],
                             retention: retentions[i % 3],
                             date: ctrl.task.year + '-05-' + day,
                             aiResult: aiRes,
-                            manualResult: (i % 4 === 0) ? '待复核' : manRes
+                            manualResult: finalManualResult
                         });
                     }
                     
@@ -816,6 +831,25 @@
                     };
 
                     ctrl.updatePagination();
+
+                    // 监听窗口重新获得焦点，刷新复核结果
+                    window.addEventListener('focus', function() {
+                        try {
+                            var reviewed = JSON.parse(localStorage.getItem('oaas_reviewed_results')) || {};
+                            var hasChanges = false;
+                            ctrl.dataList.forEach(function(item) {
+                                if (reviewed[item.archiveCode] && item.manualResult !== reviewed[item.archiveCode]) {
+                                    item.manualResult = reviewed[item.archiveCode];
+                                    hasChanges = true;
+                                }
+                            });
+                            if (hasChanges) {
+                                $timeout(function() {
+                                    // 触发视图更新
+                                });
+                            }
+                        } catch(e) {}
+                    });
                 };
             }]
         });
